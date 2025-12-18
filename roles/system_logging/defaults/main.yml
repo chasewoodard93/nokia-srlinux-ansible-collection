@@ -1,0 +1,70 @@
+---
+# defaults/main.yml - Default variables for system_logging role
+
+# ============================================================================
+# SYSLOG SERVER CONFIGURATION
+# ============================================================================
+
+# Remote syslog servers
+# logging_syslog_servers:
+#   - address: "192.168.1.100"
+#     port: 514
+#     protocol: "udp"  # udp or tcp
+#     facility: "local0"
+#     priority: "informational"  # emergency, alert, critical, error, warning, notice, informational, debug
+#   - address: "192.168.1.101"
+#     port: 514
+
+logging_syslog_servers: []
+
+# ============================================================================
+# LOG FILE CONFIGURATION  
+# ============================================================================
+
+# Enable file logging
+logging_file_enabled: true
+
+# Log file settings
+logging_file_messages:
+  name: "messages"
+  rotate: 5
+  size: 10000000  # 10MB
+
+# ============================================================================
+# CONSOLE LOGGING
+# ============================================================================
+
+# Console logging facility
+logging_console_enabled: false
+
+# Console log level
+logging_console_priority: "warning"
+
+# ============================================================================
+# BUFFER LOGGING
+# ============================================================================
+
+# Buffer (memory) logging
+logging_buffer_enabled: true
+
+# Buffer size (number of messages)
+logging_buffer_size: 10000
+
+# ============================================================================
+# LOGGING NETWORK INSTANCE
+# ============================================================================
+
+# Network instance for remote syslog
+logging_network_instance: "mgmt"
+
+# ============================================================================
+# LOG FILTERS
+# ============================================================================
+
+# Subsystems to log (empty = all)
+# Options: aaa, acl, arp, bgp, bfd, dhcp, evpn, fib, igmp, interface, isis, lag, linux, lldp, mpls, multicast, ospf, pim, platform, policy, qos, routing, static-routes, system, vxlan
+logging_subsystems: []
+
+# Default priority for all logs
+logging_default_priority: "informational"
+

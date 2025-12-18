@@ -1,0 +1,133 @@
+---
+# ============================================================================
+# FABRIC_FACTS ROLE - Calculate device configuration from fabric design
+# ============================================================================
+# This role queries live device state and calculates what needs to be
+# configured based on the fabric design intent.
+#
+# DESIGN PRINCIPLE: Store design intent, not device configs
+# - Fabric topology and IP schemes in vars/fabric_design.yml
+# - Device state queried from live devices
+# - Configuration calculated dynamically
+
+- name: "Display fabric facts calculation for {{ inventory_hostname }}"
+  debug:
+    msg: "Calculating fabric facts for {{ inventory_hostname }} based on design intent"
+
+# ============================================================================
+# STEP 1: Gather current device state
+# ============================================================================
+
+- name: "Gather device facts from {{ inventory_hostname }}"
+  chasewoodard93.srlinux.srlinux_facts:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+  register: device_facts
+  tags:
+    - facts
+    - gather
+
+- name: "Store device facts"
+  set_fact:
+    current_state: "{{ device_facts }}"
+  tags:
+    - facts
+
+# ============================================================================
+# STEP 2: Determine device role and ID
+# ============================================================================
+
+- name: "Determine if device is a spine"
+  set_fact:
+    device_role: "spine"
+    device_id: "{{ topology.spines.index(inventory_hostname) + 1 }}"
+  when: inventory_hostname in topology.spines
+  tags:
+    - calculate
+
+- name: "Determine if device is a leaf"
+  set_fact:
+    device_role: "leaf"
+    device_id: "{{ topology.leafs.index(inventory_hostname) + 1 }}"
+  when: inventory_hostname in topology.leafs
+  tags:
+    - calculate
+
+# ============================================================================
+# STEP 3: Calculate loopback IP from design
+# ============================================================================
+
+- name: "Calculate loopback IP for spine"
+  set_fact:
+    loopback_ip: "{{ loopback_scheme.spine_prefix }}.{{ device_id }}/{{ loopback_scheme.mask }}"
+    bgp_router_id: "{{ loopback_scheme.spine_prefix }}.{{ device_id }}"
+  when: device_role == "spine"
+  tags:
+    - calculate
+
+- name: "Calculate loopback IP for leaf"
+  set_fact:
+    loopback_ip: "{{ loopback_scheme.leaf_prefix }}.{{ device_id }}/{{ loopback_scheme.mask }}"
+    bgp_router_id: "{{ loopback_scheme.leaf_prefix }}.{{ device_id }}"
+  when: device_role == "leaf"
+  tags:
+    - calculate
+
+# ============================================================================
+# STEP 4: Calculate BGP AS numbers from design
+# ============================================================================
+
+- name: "Calculate BGP AS for spine"
+  set_fact:
+    bgp_asn: "{{ bgp_design.underlay.spine_asn }}"
+    route_reflector: true
+    route_reflector_cluster_id: "{{ bgp_router_id }}"
+  when: device_role == "spine"
+  tags:
+    - calculate
+
+- name: "Calculate BGP AS for leaf"
+  set_fact:
+    bgp_asn: "{{ bgp_design.underlay.leaf_asn_base + device_id - 1 }}"
+    route_reflector: false
+  when: device_role == "leaf"
+  tags:
+    - calculate
+
+# ============================================================================
+# STEP 5: Calculate interface IPs and neighbors from topology
+# ============================================================================
+
+- name: "Calculate spine interfaces and neighbors"
+  include_tasks: calculate_spine_neighbors.yml
+  when: device_role == "spine"
+  tags:
+    - calculate
+    - neighbors
+
+- name: "Calculate leaf interfaces and neighbors"
+  include_tasks: calculate_leaf_neighbors.yml
+  when: device_role == "leaf"
+  tags:
+    - calculate
+    - neighbors
+
+# ============================================================================
+# STEP 6: Display calculated facts
+# ============================================================================
+
+- name: "Display calculated fabric facts"
+  debug:
+    msg:
+      - "Device: {{ inventory_hostname }}"
+      - "Role: {{ device_role }}"
+      - "ID: {{ device_id }}"
+      - "Loopback: {{ loopback_ip }}"
+      - "BGP AS: {{ bgp_asn }}"
+      - "BGP Router ID: {{ bgp_router_id }}"
+      - "Route Reflector: {{ route_reflector | default(false) }}"
+  tags:
+    - calculate
+    - debug
+

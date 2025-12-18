@@ -1,0 +1,72 @@
+---
+# tasks/main.yml - Main tasks for bfd role
+
+- name: "Display BFD configuration information"
+  debug:
+    msg: "Configuring BFD on {{ inventory_hostname }}"
+
+# Generate and apply BFD configuration
+- name: "Generate BFD configuration"
+  set_fact:
+    _bfd_config: "{{ lookup('template', 'bfd.j2') }}"
+  when: >
+    bfd_subinterfaces | length > 0 or
+    bfd_bgp | length > 0 or
+    bfd_ospf | length > 0 or
+    bfd_micro_lag | length > 0
+
+- name: "Apply BFD configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _bfd_config.split('\n') | select('match', '^set ') | list }}"
+  register: bfd_config_result
+  when: >
+    bfd_subinterfaces | length > 0 or
+    bfd_bgp | length > 0 or
+    bfd_ospf | length > 0 or
+    bfd_micro_lag | length > 0
+
+- name: "Display BFD configuration result"
+  debug:
+    msg: |
+      Configured BFD:
+      - Subinterfaces: {{ bfd_subinterfaces | length }}
+      - BGP sessions: {{ bfd_bgp | length }}
+      - OSPF interfaces: {{ bfd_ospf | length }}
+      - Micro-BFD LAGs: {{ bfd_micro_lag | length }}
+
+# Verify BFD configuration
+- name: "Verify BFD sessions"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show bfd network-instance default peer"
+  register: bfd_sessions
+  ignore_errors: true
+
+- name: "Verify BFD configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info bfd"
+  register: bfd_verify
+
+- name: "BFD configuration complete"
+  debug:
+    msg: |
+      ✅ BFD Configuration Complete
+      ─────────────────────────────
+      Device: {{ inventory_hostname }}
+      BFD Subinterfaces: {{ bfd_subinterfaces | length }}
+      BGP with BFD: {{ bfd_bgp | length }}
+      OSPF with BFD: {{ bfd_ospf | length }}
+      Micro-BFD LAGs: {{ bfd_micro_lag | length }}
+      Default TX/RX: {{ bfd_default_tx_interval }}μs
+      Detection Multiplier: {{ bfd_default_detection_multiplier }}
+

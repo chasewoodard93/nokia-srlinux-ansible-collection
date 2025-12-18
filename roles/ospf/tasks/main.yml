@@ -1,0 +1,60 @@
+---
+# tasks/main.yml - Main tasks for ospf role
+
+- name: "Display OSPF configuration information"
+  debug:
+    msg: "Configuring OSPF on {{ inventory_hostname }}"
+
+# Generate and apply OSPF configuration
+- name: "Generate OSPF configuration"
+  set_fact:
+    _ospf_config: "{{ lookup('template', 'ospf.j2') }}"
+  when: ospf_instances | length > 0
+
+- name: "Apply OSPF configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _ospf_config.split('\n') | select('match', '^set ') | list }}"
+  register: ospf_config_result
+  when: ospf_instances | length > 0
+
+- name: "Display OSPF configuration result"
+  debug:
+    msg: "Configured {{ ospf_instances | length }} OSPF instance(s)"
+  when: ospf_instances | length > 0
+
+# Verify OSPF configuration
+- name: "Verify OSPF neighbors"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance default protocols ospf neighbor"
+  register: ospf_neighbors
+  when: ospf_instances | length > 0
+  ignore_errors: true
+
+- name: "Verify OSPF interfaces"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info network-instance default protocols ospf"
+  register: ospf_verify
+  when: ospf_instances | length > 0
+
+- name: "OSPF configuration complete"
+  debug:
+    msg: |
+      ✅ OSPF Configuration Complete
+      ──────────────────────────────
+      Device: {{ inventory_hostname }}
+      OSPF Instances: {{ ospf_instances | length }}
+      Areas: {{ ospf_instances | map(attribute='areas') | flatten | length }}
+      Interfaces: {{ ospf_instances | map(attribute='areas') | flatten | map(attribute='interfaces') | flatten | length }}
+  when: ospf_instances | length > 0
+

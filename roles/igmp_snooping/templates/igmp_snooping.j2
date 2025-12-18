@@ -1,0 +1,58 @@
+{# IGMP Snooping configuration template for SR Linux #}
+
+{% for instance in igmp_snooping_instances %}
+{# ============================================================================ #}
+{# IGMP Snooping: {{ instance.network_instance }}                              #}
+{# ============================================================================ #}
+
+{# Enable IGMP snooping #}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping admin-state {{ instance.admin_state | default('enable') }}
+
+{# IGMP version #}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping version {{ instance.version | default(igmp_default_version) }}
+
+{# Query interval #}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping query-interval {{ instance.querier.interval | default(igmp_query_interval) if instance.querier is defined else igmp_query_interval }}
+
+{# Robustness #}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping robustness {{ igmp_robustness }}
+
+{# Fast leave #}
+{% if instance.fast_leave | default(igmp_fast_leave_enabled) %}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping fast-leave true
+{% endif %}
+
+{# Querier configuration #}
+{% if instance.querier is defined and instance.querier.enabled | default(false) %}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping querier admin-state enable
+{% if instance.querier.address is defined %}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping querier source-address {{ instance.querier.address }}
+{% endif %}
+{% endif %}
+
+{# Static mrouter ports #}
+{% for port in instance.mrouter_ports | default([]) %}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping interface {{ port }} mrouter-port true
+{% endfor %}
+
+{# Maximum groups #}
+{% if instance.max_groups is defined %}
+set / network-instance {{ instance.network_instance }} protocols igmp-snooping maximum-number-groups {{ instance.max_groups }}
+{% endif %}
+
+{% endfor %}
+
+{# ============================================================================ #}
+{# MLD Snooping (IPv6)                                                         #}
+{# ============================================================================ #}
+{% for instance in mld_snooping_instances %}
+
+set / network-instance {{ instance.network_instance }} protocols mld-snooping admin-state {{ instance.admin_state | default('enable') }}
+set / network-instance {{ instance.network_instance }} protocols mld-snooping version {{ instance.version | default(mld_default_version) }}
+
+{% if instance.querier is defined and instance.querier.enabled | default(false) %}
+set / network-instance {{ instance.network_instance }} protocols mld-snooping querier admin-state enable
+{% endif %}
+
+{% endfor %}
+

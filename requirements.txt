@@ -1,0 +1,22 @@
+# Python dependencies for chasewoodard93.srlinux Ansible collection
+
+# Core Ansible
+ansible>=2.10
+ansible-core>=2.12
+
+# Network automation
+paramiko>=2.7.0
+netaddr>=0.8.0
+
+# Template engine
+jinja2>=3.0.0
+
+# YAML parsing
+pyyaml>=5.4.0
+
+# HTTP/API client
+requests>=2.25.0
+
+# JSON-RPC support
+jsonrpc-requests>=0.4.0
+

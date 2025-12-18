@@ -1,0 +1,7 @@
+{# LLDP configuration template #}
+{# Enables LLDP for neighbor discovery #}
+
+{% if enable_lldp | default(true) %}
+set / system lldp admin-state enable
+{% endif %}
+

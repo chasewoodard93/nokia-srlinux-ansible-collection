@@ -1,0 +1,32 @@
+{# Event Handler configuration template for SR Linux #}
+
+{% for handler in event_handlers %}
+{# ============================================================================ #}
+{# Event Handler: {{ handler.name }}                                           #}
+{# ============================================================================ #}
+
+{# Create event handler instance #}
+set / system event-handler instance {{ handler.name }} admin-state {{ handler.admin_state | default(event_handler_default_state) }}
+
+{# Configure paths to monitor #}
+{% for path in handler.paths | default([]) %}
+set / system event-handler instance {{ handler.name }} paths [ "{{ path }}" ]
+{% endfor %}
+
+{# Configure script #}
+{% if handler.script_path is defined %}
+set / system event-handler instance {{ handler.name }} upython-script "{{ handler.script_path }}"
+{% elif handler.upython_script is defined %}
+{# Inline script - will be deployed separately #}
+set / system event-handler instance {{ handler.name }} upython-script "{{ event_handler_script_dir }}/{{ handler.name }}.py"
+{% endif %}
+
+{# Options #}
+{% if handler.options is defined %}
+{% if handler.options.debug | default(false) %}
+set / system event-handler instance {{ handler.name }} options debug true
+{% endif %}
+{% endif %}
+
+{% endfor %}
+

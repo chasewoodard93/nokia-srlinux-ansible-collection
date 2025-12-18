@@ -1,0 +1,13 @@
+{# Physical interface configuration template #}
+{# Configures point-to-point links between spines and leafs #}
+
+{% if interfaces is defined and interfaces | length > 0 %}
+{% for interface in interfaces %}
+set / interface {{ interface.name }} admin-state {{ interface.admin_state | default('enable') }}
+set / interface {{ interface.name }} description "{{ interface.description | default('Configured by Ansible') }}"
+set / interface {{ interface.name }} subinterface 0 admin-state enable
+set / interface {{ interface.name }} subinterface 0 ipv4 admin-state enable
+set / interface {{ interface.name }} subinterface 0 ipv4 address {{ interface.ipv4 }}
+{% endfor %}
+{% endif %}
+

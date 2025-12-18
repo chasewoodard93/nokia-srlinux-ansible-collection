@@ -1,0 +1,35 @@
+---
+# defaults/main.yml - Default variables for l2_services role
+
+# MAC-VRF (Layer 2 service) configuration
+mac_vrfs: []
+# Example format:
+# mac_vrfs:
+#   - name: "customer-a"
+#     vni: 10100
+#     vlan: 100
+#     description: "Customer A L2 Service"
+#     interfaces:
+#       - name: "ethernet-1/10"
+#         vlan_tagging: true
+#         vlan_id: 100
+
+# EVPN configuration for MAC-VRF
+evpn_evi_type: "mac-vrf"
+
+# Default VXLAN interface
+vxlan_interface: "vxlan1"
+
+# MAC learning
+mac_learning: true
+mac_limit: 1000
+
+# Unknown unicast/multicast/broadcast behavior
+unknown_unicast_action: "flood"  # Options: flood, drop
+unknown_multicast_action: "flood"
+unknown_broadcast_action: "flood"
+
+# ARP/ND suppression
+arp_suppression: false
+nd_suppression: false
+

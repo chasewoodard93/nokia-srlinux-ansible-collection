@@ -1,0 +1,73 @@
+---
+# tasks/main.yml - Main tasks for network_instance role
+
+- name: "Display network instance configuration info"
+  debug:
+    msg: "Configuring network instances on {{ inventory_hostname }}"
+
+# Generate network instance configuration
+- name: "Generate network instance configuration"
+  template:
+    src: network_instance.j2
+    dest: "/tmp/{{ inventory_hostname }}_network_instance.cfg"
+  delegate_to: localhost
+  when: network_instances | length > 0
+
+- name: "Read network instance configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_network_instance.cfg"
+  register: ni_config_raw
+  delegate_to: localhost
+  when: network_instances | length > 0
+
+- name: "Parse network instance commands"
+  set_fact:
+    ni_commands: "{{ (ni_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: network_instances | length > 0
+
+# Apply network instance configuration
+- name: "Apply network instance configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ ni_commands }}"
+  register: ni_result
+  when: 
+    - network_instances | length > 0
+    - ni_commands | length > 0
+
+# Verify network instances
+- name: "Verify network instances"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance summary"
+  register: ni_status
+
+- name: "Display network instance summary"
+  debug:
+    msg: "{{ ni_status.stdout_lines[0] | default('No output') }}"
+
+- name: "Display configuration summary"
+  debug:
+    msg: |
+      ✅ Network Instance Configuration Complete
+      ──────────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Network Instances: {{ network_instances | length }}
+      {% for ni in network_instances %}
+      - {{ ni.name }} ({{ ni.type | default('ip-vrf') }})
+      {% endfor %}
+  when: network_instances | length > 0
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_network_instance.cfg"
+    state: absent
+  delegate_to: localhost
+  when: network_instances | length > 0
+

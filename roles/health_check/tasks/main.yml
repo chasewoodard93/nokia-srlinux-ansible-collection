@@ -1,0 +1,127 @@
+---
+# tasks/main.yml - Main tasks for health_check role
+
+- name: "Display health check information"
+  debug:
+    msg: "Running health checks on {{ inventory_hostname }}"
+
+# Initialize health status
+- name: "Initialize health status"
+  set_fact:
+    _health_status:
+      hostname: "{{ inventory_hostname }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      checks: []
+      passed: 0
+      failed: 0
+      warnings: 0
+      overall: "UNKNOWN"
+
+# System health check
+- name: "Check system information"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show version"
+  register: version_output
+  when: health_check_system
+
+- name: "Record system check result"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'checks': _health_status.checks + [{'name': 'System', 'status': 'PASS', 'details': 'Device reachable'}]}) }}"
+  when: health_check_system and version_output is succeeded
+
+# Interface health check
+- name: "Check interface status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show interface brief"
+  register: interface_output
+  when: health_check_interfaces
+
+- name: "Parse interface states"
+  set_fact:
+    _interfaces_up: "{{ (interface_output.stdout | join(' ')) | regex_findall('\\|\\s+(ethernet-[0-9/]+)\\s+\\|\\s+enable\\s+\\|\\s+up') | length }}"
+    _interfaces_down: "{{ (interface_output.stdout | join(' ')) | regex_findall('\\|\\s+(ethernet-[0-9/]+)\\s+\\|\\s+enable\\s+\\|\\s+down') | length }}"
+  when: health_check_interfaces and interface_output is succeeded
+
+- name: "Record interface check result"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'checks': _health_status.checks + [{'name': 'Interfaces', 'status': 'PASS' if (_interfaces_down | int == 0) else 'WARN', 'details': _interfaces_up ~ ' up, ' ~ _interfaces_down ~ ' down'}]}) }}"
+  when: health_check_interfaces and interface_output is succeeded
+
+# BGP health check
+- name: "Check BGP session status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance default protocols bgp neighbor"
+  register: bgp_output
+  when: health_check_bgp
+  ignore_errors: true
+
+- name: "Parse BGP session states"
+  set_fact:
+    _bgp_established: "{{ (bgp_output.stdout | join(' ')) | regex_findall('established') | length }}"
+    _bgp_total: "{{ (bgp_output.stdout | join(' ')) | regex_findall('connect|idle|active|established') | length }}"
+  when: health_check_bgp and bgp_output is succeeded
+
+- name: "Record BGP check result"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'checks': _health_status.checks + [{'name': 'BGP Sessions', 'status': 'PASS' if (_bgp_established | int > 0) else 'WARN', 'details': _bgp_established ~ ' established'}]}) }}"
+  when: health_check_bgp and bgp_output is succeeded
+
+# Include additional check tasks
+- name: "Include memory and CPU checks"
+  include_tasks: check_resources.yml
+  when: health_check_memory or health_check_cpu
+
+# Calculate overall status
+- name: "Calculate passed checks"
+  set_fact:
+    _passed: "{{ _health_status.checks | selectattr('status', 'equalto', 'PASS') | list | length }}"
+    _failed: "{{ _health_status.checks | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+    _warnings: "{{ _health_status.checks | selectattr('status', 'equalto', 'WARN') | list | length }}"
+
+- name: "Set overall health status"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'passed': _passed | int, 'failed': _failed | int, 'warnings': _warnings | int, 'overall': 'HEALTHY' if (_failed | int == 0) else 'UNHEALTHY'}) }}"
+
+# Store in host fact for later use
+- name: "Store health status as host fact"
+  set_fact:
+    srlinux_health_status: "{{ _health_status }}"
+
+# Display summary
+- name: "Display health check summary"
+  debug:
+    msg: |
+      ═══════════════════════════════════════════
+      Health Check Report: {{ _health_status.hostname }}
+      ═══════════════════════════════════════════
+      Timestamp: {{ _health_status.timestamp }}
+      Overall Status: {{ _health_status.overall }}
+      ───────────────────────────────────────────
+      Checks Passed:  {{ _health_status.passed }}
+      Checks Failed:  {{ _health_status.failed }}
+      Warnings:       {{ _health_status.warnings }}
+      ───────────────────────────────────────────
+      {% for check in _health_status.checks %}
+      {{ '✅' if check.status == 'PASS' else ('❌' if check.status == 'FAIL' else '⚠️') }} {{ check.name }}: {{ check.status }} - {{ check.details }}
+      {% endfor %}
+      ═══════════════════════════════════════════
+  when: health_show_summary
+
+# Fail if critical issues found
+- name: "Fail if health check failed"
+  fail:
+    msg: "Health check failed: {{ _health_status.failed }} critical issues found"
+  when: health_fail_on_error and _health_status.failed | int > 0
+

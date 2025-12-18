@@ -1,0 +1,70 @@
+---
+# tasks/main.yml - Main tasks for dhcp_relay role
+
+- name: "Display DHCP relay configuration info"
+  debug:
+    msg: "Configuring DHCP relay on {{ inventory_hostname }}"
+
+# Generate DHCP relay configuration
+- name: "Generate DHCP relay configuration"
+  template:
+    src: dhcp_relay.j2
+    dest: "/tmp/{{ inventory_hostname }}_dhcp_relay.cfg"
+  delegate_to: localhost
+  when: dhcp_relay_instances | length > 0 or dhcpv6_relay_instances | length > 0
+
+- name: "Read DHCP relay configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_dhcp_relay.cfg"
+  register: dhcp_config_raw
+  delegate_to: localhost
+  when: dhcp_relay_instances | length > 0 or dhcpv6_relay_instances | length > 0
+
+- name: "Parse DHCP relay commands"
+  set_fact:
+    dhcp_commands: "{{ (dhcp_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: dhcp_relay_instances | length > 0 or dhcpv6_relay_instances | length > 0
+
+# Apply DHCP relay configuration
+- name: "Apply DHCP relay configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ dhcp_commands }}"
+  register: dhcp_result
+  when: 
+    - dhcp_relay_instances | length > 0 or dhcpv6_relay_instances | length > 0
+    - dhcp_commands | length > 0
+
+# Verify DHCP relay
+- name: "Verify DHCP relay status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance * protocols dhcp-relay"
+  register: dhcp_status
+  when: dhcp_relay_instances | length > 0
+
+- name: "Display DHCP relay summary"
+  debug:
+    msg: |
+      ✅ DHCP Relay Configuration Complete
+      ─────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      DHCPv4 Relay Instances: {{ dhcp_relay_instances | length }}
+      DHCPv6 Relay Instances: {{ dhcpv6_relay_instances | length }}
+      {% for relay in dhcp_relay_instances %}
+      - {{ relay.network_instance }}: {{ relay.servers | map(attribute='address') | list | join(', ') }}
+      {% endfor %}
+  when: dhcp_relay_instances | length > 0 or dhcpv6_relay_instances | length > 0
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_dhcp_relay.cfg"
+    state: absent
+  delegate_to: localhost
+

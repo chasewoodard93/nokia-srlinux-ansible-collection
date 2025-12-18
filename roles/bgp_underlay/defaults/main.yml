@@ -1,0 +1,167 @@
+---
+# defaults/main.yml - Default variables for bgp_underlay role
+# These can be overridden in group_vars/, host_vars/, or playbooks
+# Following Ansible best practices for variable precedence
+
+# ============================================================================
+# BGP INSTANCE CONFIGURATION
+# ============================================================================
+
+# BGP AS number (MUST be overridden in host_vars/ or group_vars/)
+# Spines: AS 65000 (iBGP between spines)
+# Leafs: AS 65001-65004 (unique per leaf for eBGP)
+bgp_asn: 65000
+
+# BGP router ID (derived from loopback IP)
+# Uses Jinja2 filter to extract IP address from CIDR notation
+bgp_router_id: "{{ loopback_ip.split('/')[0] }}"
+
+# ============================================================================
+# BGP NEIGHBORS
+# ============================================================================
+
+# BGP neighbor configuration (MUST be defined in host_vars/)
+# Empty by default - each device has unique neighbor configuration
+bgp_neighbors: []
+
+# Example format (defined in host_vars/):
+# bgp_neighbors:
+#   - peer: leaf1
+#     peer_ip: "10.0.1.1"
+#     peer_asn: 65001
+#     description: "leaf1"
+#   - peer: leaf2
+#     peer_ip: "10.0.1.3"
+#     peer_asn: 65002
+#     description: "leaf2"
+
+# ============================================================================
+# BGP ADDRESS FAMILIES
+# ============================================================================
+
+# Enable IPv4 unicast address family
+bgp_ipv4_unicast: true
+
+# Enable IPv6 unicast address family (disabled by default)
+bgp_ipv6_unicast: false
+
+# ============================================================================
+# BGP TIMERS
+# ============================================================================
+
+# BGP keepalive interval (seconds) - should be overridden in group_vars/all.yml
+bgp_keepalive: 3
+
+# BGP hold time (seconds) - should be overridden in group_vars/all.yml
+bgp_holdtime: 9
+
+# ============================================================================
+# BGP POLICIES
+# ============================================================================
+
+# Advertise loopback interface in BGP
+advertise_loopback: true
+
+# Advertise connected routes
+advertise_connected: false
+
+# ============================================================================
+# NETWORK INSTANCE
+# ============================================================================
+
+# Network instance (VRF) name
+network_instance: "default"
+
+# ============================================================================
+# BGP MULTIPATH (ECMP)
+# ============================================================================
+
+# Enable BGP multipath for ECMP
+bgp_multipath: true
+
+# Maximum number of ECMP paths - should be overridden in group_vars/all.yml
+bgp_ecmp_max_paths: 64
+
+# ============================================================================
+# BFD (Bidirectional Forwarding Detection)
+# ============================================================================
+
+# Enable BFD for fast convergence (disabled by default)
+enable_bfd: false
+
+# BFD minimum transmit interval (milliseconds)
+bfd_min_tx: 100
+
+# BFD minimum receive interval (milliseconds)
+bfd_min_rx: 100
+
+# BFD detection multiplier
+bfd_multiplier: 3
+
+# ============================================================================
+# BGP AUTHENTICATION
+# ============================================================================
+
+# Enable BGP authentication (MD5 or TCP-AO)
+bgp_authentication_enabled: false
+
+# Authentication type: "md5" or "tcp-ao"
+bgp_authentication_type: "md5"
+
+# Authentication key (used for all neighbors if not specified per-neighbor)
+# bgp_authentication_key: "bgp_secret_key"
+
+# Per-neighbor authentication (overrides global)
+# bgp_neighbor_authentication:
+#   - neighbor_ip: "10.0.0.1"
+#     auth_type: "md5"
+#     key: "neighbor_specific_key"
+
+bgp_neighbor_authentication: []
+
+# ============================================================================
+# GRACEFUL RESTART
+# ============================================================================
+
+# Enable BGP graceful restart
+bgp_graceful_restart_enabled: true
+
+# Graceful restart mode: "helper-only" or "full"
+bgp_graceful_restart_mode: "helper-only"
+
+# Restart time (seconds) - time to wait for peer to restart
+bgp_graceful_restart_time: 120
+
+# Stale routes time (seconds) - time to keep stale routes
+bgp_graceful_stale_routes_time: 360
+
+# ============================================================================
+# BGP TRANSPORT OPTIONS
+# ============================================================================
+
+# Local address for BGP sessions (source IP)
+# bgp_local_address: "10.0.0.1"
+
+# Enable passive mode (wait for incoming connections)
+bgp_passive_mode: false
+
+# TCP MSS (Maximum Segment Size)
+# bgp_tcp_mss: 1460
+
+# TTL security (GTSM - Generalized TTL Security Mechanism)
+bgp_ttl_security_enabled: false
+bgp_ttl_security_min_ttl: 254
+
+# ============================================================================
+# BGP CONVERGENCE TUNING
+# ============================================================================
+
+# Minimum advertisement interval (seconds)
+bgp_min_advertisement_interval: 1
+
+# Connect retry interval (seconds)
+bgp_connect_retry: 30
+
+# Enable fast external fallover
+bgp_fast_external_fallover: true
+

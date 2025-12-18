@@ -1,0 +1,90 @@
+---
+# Example Playbook: Port Mirroring (SPAN) Configuration
+# Configures local and remote port mirroring for traffic analysis
+#
+# Usage:
+#   ansible-playbook 15_mirroring.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - Local port mirroring (SPAN)
+#   - Remote port mirroring (RSPAN/ERSPAN concepts)
+#   - Ingress and egress traffic capture
+#   - Mirror session management
+
+- name: Configure Port Mirroring
+  hosts: srlinux
+  gather_facts: false
+  vars:
+    # Mirroring sessions
+    mirror_sessions:
+      # Local SPAN - mirror to local interface
+      - name: span-server-traffic
+        admin_state: enable
+        description: "Mirror server traffic for analysis"
+        mirror_source:
+          - type: interface
+            name: ethernet-1/10
+            direction: ingress-egress
+          - type: interface
+            name: ethernet-1/11
+            direction: ingress
+        mirror_destination:
+          type: local
+          interface: ethernet-1/48
+          
+      # Mirror with ACL filter
+      - name: span-filtered
+        admin_state: enable
+        description: "Mirror specific traffic"
+        mirror_source:
+          - type: interface
+            name: ethernet-1/1
+            direction: ingress
+        mirror_destination:
+          type: local
+          interface: ethernet-1/47
+          
+      # LAG mirroring
+      - name: span-lag-traffic
+        admin_state: enable
+        description: "Mirror LAG interface"
+        mirror_source:
+          - type: interface
+            name: lag1
+            direction: egress
+        mirror_destination:
+          type: local
+          interface: ethernet-1/46
+
+  tasks:
+    - name: Display mirror sessions to configure
+      ansible.builtin.debug:
+        msg: |
+          Configuring {{ mirror_sessions | length }} mirror sessions:
+          {% for session in mirror_sessions %}
+          - {{ session.name }}: {{ session.description }}
+            Sources: {{ session.mirror_source | length }}
+            Destination: {{ session.mirror_destination.interface }}
+          {% endfor %}
+
+    - name: Apply mirroring configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.mirroring
+      vars:
+        mirroring_enabled: true
+        mirroring_sessions: "{{ mirror_sessions }}"
+
+    - name: Verify mirror configuration
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - info from running /system mirroring
+          - show system mirroring mirroring-instance *
+      register: mirror_status
+
+    - name: Display mirror session status
+      ansible.builtin.debug:
+        var: mirror_status.stdout_lines
+

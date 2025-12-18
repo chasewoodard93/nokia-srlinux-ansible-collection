@@ -1,0 +1,67 @@
+---
+# defaults/main.yml - Default variables for cpm_filter role
+# Control Plane Protection (CPM) filters protect the CPU from excessive traffic
+
+# ============================================================================
+# CPM FILTER CONFIGURATION
+# ============================================================================
+
+# CPM filter entries to configure
+# cpm_filter_entries:
+#   - sequence: 10
+#     action: "accept"
+#     description: "Allow SSH"
+#     protocol: "tcp"
+#     destination_port: 22
+#     rate_limit: 100  # pps (optional)
+#   - sequence: 20
+#     action: "accept"
+#     description: "Allow BGP"
+#     protocol: "tcp"
+#     destination_port: 179
+#   - sequence: 30
+#     action: "accept"
+#     description: "Allow ICMP"
+#     protocol: "icmp"
+#     rate_limit: 1000
+#   - sequence: 1000
+#     action: "drop"
+#     description: "Drop all other"
+
+cpm_filter_entries: []
+
+# ============================================================================
+# DEFAULT SYSTEM CPM RULES
+# ============================================================================
+
+# Keep default system CPM rules (recommended: true)
+cpm_keep_defaults: true
+
+# ============================================================================
+# RATE LIMITING
+# ============================================================================
+
+# Global rate limit for control plane traffic (pps)
+# cpm_global_rate_limit: 10000
+
+# Enable rate limiting per protocol
+cpm_rate_limit_enabled: false
+
+# Rate limits by protocol (pps)
+cpm_rate_limits:
+  ssh: 100
+  bgp: 1000
+  icmp: 1000
+  snmp: 500
+  ntp: 100
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+# Log dropped packets
+cpm_log_drops: false
+
+# Log accepted packets (not recommended for production)
+cpm_log_accepts: false
+

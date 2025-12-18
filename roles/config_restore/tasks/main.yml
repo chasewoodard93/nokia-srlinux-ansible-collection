@@ -1,0 +1,134 @@
+---
+# tasks/main.yml - Main tasks for config_restore role
+
+- name: "Display restore information"
+  debug:
+    msg: "Restoring configuration on {{ inventory_hostname }}"
+
+# Determine which backup file to use
+- name: "Find latest backup file"
+  delegate_to: localhost
+  find:
+    paths: "{{ restore_from_dir }}"
+    patterns: "{{ inventory_hostname }}*.cfg,{{ inventory_hostname }}*.json"
+  register: backup_files
+  when: restore_from_dir is defined and restore_latest | default(false)
+
+- name: "Set restore file from latest"
+  set_fact:
+    _restore_file: "{{ (backup_files.files | sort(attribute='mtime', reverse=true) | first).path }}"
+  when: restore_from_dir is defined and restore_latest | default(false) and backup_files.files | length > 0
+
+- name: "Set restore file from explicit path"
+  set_fact:
+    _restore_file: "{{ restore_backup_file }}"
+  when: restore_backup_file is defined
+
+- name: "Verify restore file is defined"
+  assert:
+    that:
+      - _restore_file is defined
+    fail_msg: "No restore file specified. Set restore_backup_file or restore_from_dir with restore_latest"
+
+# Validate backup file exists
+- name: "Verify backup file exists"
+  delegate_to: localhost
+  stat:
+    path: "{{ _restore_file }}"
+  register: restore_file_stat
+
+- name: "Assert backup file exists"
+  assert:
+    that:
+      - restore_file_stat.stat.exists
+    fail_msg: "Backup file not found: {{ _restore_file }}"
+
+# Read backup file content
+- name: "Read backup file content"
+  delegate_to: localhost
+  slurp:
+    src: "{{ _restore_file }}"
+  register: backup_content_raw
+
+- name: "Decode backup content"
+  set_fact:
+    _backup_content: "{{ backup_content_raw.content | b64decode }}"
+
+# Create pre-restore backup if enabled
+- name: "Create pre-restore backup"
+  chasewoodard93.srlinux.srlinux_backup:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    backup_dir: "{{ restore_backup_dir }}"
+    format: "set"
+    include_timestamp: true
+  register: pre_restore_backup
+  when: restore_create_backup
+
+- name: "Display pre-restore backup path"
+  debug:
+    msg: "Pre-restore backup saved to: {{ pre_restore_backup.backup_path }}"
+  when: restore_create_backup and pre_restore_backup is defined
+
+# Parse and apply configuration
+- name: "Parse configuration lines from backup"
+  set_fact:
+    _config_lines: "{{ _backup_content.split('\n') | select('match', '^set ') | list }}"
+  when: "'set ' in _backup_content"
+
+- name: "Display number of config lines to apply"
+  debug:
+    msg: "Found {{ _config_lines | length }} configuration commands to apply"
+
+# Dry run - just show what would be applied
+- name: "Dry run - display configuration to apply"
+  debug:
+    msg: "{{ _config_lines[:20] }}... (showing first 20 of {{ _config_lines | length }} lines)"
+  when: restore_dry_run
+
+# Apply configuration (merge mode)
+- name: "Apply configuration (merge mode)"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _config_lines }}"
+  register: restore_result
+  when: not restore_dry_run and restore_mode == 'merge'
+
+# Save configuration
+- name: "Save configuration to startup"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "save startup"
+  when: restore_save_config and not restore_dry_run
+
+# Verify connectivity
+- name: "Verify device is still reachable"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show version"
+  register: verify_result
+  when: restore_verify_connectivity and not restore_dry_run
+
+# Summary
+- name: "Display restore summary"
+  debug:
+    msg: |
+      ✅ Configuration Restore Complete
+      ────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Restore File: {{ _restore_file }}
+      Config Lines Applied: {{ _config_lines | length }}
+      Pre-restore Backup: {{ pre_restore_backup.backup_path | default('Not created') }}
+      Mode: {{ restore_mode }}
+      Status: {{ 'DRY RUN - No changes made' if restore_dry_run else 'Applied successfully' }}
+  when: restore_show_summary
+

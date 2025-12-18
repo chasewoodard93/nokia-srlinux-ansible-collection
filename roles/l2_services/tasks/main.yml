@@ -1,0 +1,142 @@
+---
+# tasks/main.yml - Main tasks for l2_services role
+
+- name: "Display role information"
+  debug:
+    msg: "Configuring L2 services on {{ inventory_hostname }}"
+
+# Task 1: Create MAC-VRF network instances
+- name: "Create MAC-VRF network instances"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.name }} type mac-vrf"
+      - "set / network-instance {{ item.name }} description \"{{ item.description }}\""
+      - "set / network-instance {{ item.name }} admin-state enable"
+  loop: "{{ mac_vrfs }}"
+  when: mac_vrfs is defined and mac_vrfs | length > 0
+  register: mac_vrf_create
+  tags:
+    - l2
+    - mac-vrf
+
+- name: "Display MAC-VRF creation summary"
+  debug:
+    msg: "Created {{ mac_vrfs | length }} MAC-VRFs"
+  when: mac_vrfs is defined and mac_vrfs | length > 0
+
+# Task 2: Configure VXLAN VNI for each MAC-VRF
+- name: "Configure VXLAN VNI for MAC-VRFs"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.name }} vxlan-interface {{ vxlan_interface }}.{{ item.vni }}"
+      - "set / tunnel-interface {{ vxlan_interface }} vxlan-interface {{ item.vni }} type bridged"
+      - "set / tunnel-interface {{ vxlan_interface }} vxlan-interface {{ item.vni }} ingress vni {{ item.vni }}"
+  loop: "{{ mac_vrfs }}"
+  when: mac_vrfs is defined and mac_vrfs | length > 0
+  register: vxlan_vni_config
+  tags:
+    - l2
+    - mac-vrf
+    - vxlan
+
+# Task 3: Configure EVPN for each MAC-VRF
+- name: "Configure EVPN for MAC-VRFs"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.name }} protocols bgp-evpn bgp-instance 1 admin-state enable"
+      - "set / network-instance {{ item.name }} protocols bgp-evpn bgp-instance 1 vxlan-interface {{ vxlan_interface }}.{{ item.vni }}"
+      - "set / network-instance {{ item.name }} protocols bgp-evpn bgp-instance 1 evi {{ item.vni }}"
+  loop: "{{ mac_vrfs }}"
+  when: mac_vrfs is defined and mac_vrfs | length > 0
+  register: evpn_mac_vrf_config
+  tags:
+    - l2
+    - mac-vrf
+    - evpn
+
+# Task 4: Configure host-facing interfaces
+- name: "Configure host-facing interfaces for MAC-VRFs"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / interface {{ item.1.name }} admin-state enable"
+      - "set / interface {{ item.1.name }} subinterface {{ item.1.vlan_id | default(0) }} type bridged"
+      - "set / interface {{ item.1.name }} subinterface {{ item.1.vlan_id | default(0) }} admin-state enable"
+      - "set / network-instance {{ item.0.name }} interface {{ item.1.name }}.{{ item.1.vlan_id | default(0) }}"
+  with_subelements:
+    - "{{ mac_vrfs | default([]) }}"
+    - interfaces
+    - skip_missing: true
+  when:
+    - mac_vrfs is defined
+    - mac_vrfs | length > 0
+  register: host_interface_config
+  tags:
+    - l2
+    - mac-vrf
+    - interfaces
+
+# Task 5: Configure MAC learning
+- name: "Configure MAC learning for MAC-VRFs"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.name }} bridge-table mac-learning admin-state {{ 'enable' if mac_learning else 'disable' }}"
+      - "set / network-instance {{ item.name }} bridge-table mac-limit maximum-entries {{ mac_limit }}"
+  loop: "{{ mac_vrfs }}"
+  when: mac_vrfs is defined and mac_vrfs | length > 0
+  register: mac_learning_config
+  tags:
+    - l2
+    - mac-vrf
+
+# Task 6: Verify MAC-VRF status
+- name: "Verify MAC-VRF status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ item.name }} bridge-table mac-table all"
+  loop: "{{ mac_vrfs }}"
+  when: mac_vrfs is defined and mac_vrfs | length > 0
+  register: mac_vrf_status
+  tags:
+    - l2
+    - mac-vrf
+    - verify
+
+# Task 7: Verify EVPN routes for MAC-VRF
+- name: "Verify EVPN routes for MAC-VRFs"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ item.name }} protocols bgp-evpn bgp-instance 1 routes"
+  loop: "{{ mac_vrfs }}"
+  when: mac_vrfs is defined and mac_vrfs | length > 0
+  register: evpn_mac_vrf_routes
+  tags:
+    - l2
+    - mac-vrf
+    - evpn
+    - verify
+
+- name: "L2 services configuration complete"
+  debug:
+    msg: "✅ L2 services configured successfully on {{ inventory_hostname }}"
+

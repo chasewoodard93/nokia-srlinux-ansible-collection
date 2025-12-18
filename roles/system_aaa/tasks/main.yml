@@ -1,0 +1,89 @@
+---
+# tasks/main.yml - Main tasks for system_aaa role
+
+- name: "Display AAA configuration information"
+  debug:
+    msg: "Configuring AAA on {{ inventory_hostname }}"
+
+# Configure local users
+- name: "Generate local user configuration"
+  set_fact:
+    _aaa_user_config: "{{ lookup('template', 'aaa_users.j2') }}"
+  when: aaa_users | length > 0
+
+- name: "Apply local user configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _aaa_user_config.split('\n') | select('match', '^set ') | list }}"
+  register: user_config_result
+  when: aaa_users | length > 0
+
+- name: "Display user configuration result"
+  debug:
+    msg: "Configured {{ aaa_users | length }} local users"
+  when: aaa_users | length > 0
+
+# Configure TACACS+ servers
+- name: "Generate TACACS+ configuration"
+  set_fact:
+    _aaa_tacacs_config: "{{ lookup('template', 'aaa_tacacs.j2') }}"
+  when: aaa_tacacs_enabled and aaa_tacacs_servers | length > 0
+
+- name: "Apply TACACS+ configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _aaa_tacacs_config.split('\n') | select('match', '^set ') | list }}"
+  register: tacacs_config_result
+  when: aaa_tacacs_enabled and aaa_tacacs_servers | length > 0
+
+- name: "Display TACACS+ configuration result"
+  debug:
+    msg: "Configured {{ aaa_tacacs_servers | length }} TACACS+ servers"
+  when: aaa_tacacs_enabled and aaa_tacacs_servers | length > 0
+
+# Configure authentication order
+- name: "Configure authentication order"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / system aaa authentication authentication-method {{ aaa_authentication_order | join(' ') }}"
+  register: auth_order_result
+  when: aaa_authentication_order | length > 0
+
+# Configure idle timeout
+- name: "Configure session idle timeout"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / system aaa authentication idle-timeout {{ aaa_idle_timeout }}"
+  when: aaa_idle_timeout > 0
+
+# Verify configuration
+- name: "Verify AAA configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info system aaa"
+  register: aaa_verify
+
+- name: "AAA configuration complete"
+  debug:
+    msg: |
+      ✅ AAA Configuration Complete
+      ────────────────────────────
+      Device: {{ inventory_hostname }}
+      Local Users: {{ aaa_users | length }}
+      TACACS+ Enabled: {{ aaa_tacacs_enabled }}
+      RADIUS Enabled: {{ aaa_radius_enabled }}
+      Auth Order: {{ aaa_authentication_order | join(', ') }}
+

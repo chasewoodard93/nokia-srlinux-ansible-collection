@@ -1,0 +1,49 @@
+---
+# tasks/main.yml - Main tasks for lag role
+
+- name: "Display LAG configuration information"
+  debug:
+    msg: "Configuring LAG interfaces on {{ inventory_hostname }}"
+
+# Generate and apply LAG configuration
+- name: "Generate LAG configuration"
+  set_fact:
+    _lag_config: "{{ lookup('template', 'lag.j2') }}"
+  when: lag_interfaces | length > 0
+
+- name: "Apply LAG configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _lag_config.split('\n') | select('match', '^set ') | list }}"
+  register: lag_config_result
+  when: lag_interfaces | length > 0
+
+- name: "Display LAG configuration result"
+  debug:
+    msg: "Configured {{ lag_interfaces | length }} LAG interfaces"
+  when: lag_interfaces | length > 0
+
+# Verify LAG configuration
+- name: "Verify LAG configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show interface lag*"
+  register: lag_verify
+  when: lag_interfaces | length > 0
+  ignore_errors: true
+
+- name: "LAG configuration complete"
+  debug:
+    msg: |
+      ✅ LAG Configuration Complete
+      ─────────────────────────────
+      Device: {{ inventory_hostname }}
+      LAG Interfaces: {{ lag_interfaces | length }}
+      ESI Configurations: {{ lag_esi | length }}
+      Default LACP Mode: {{ lag_default_lacp_mode }}
+

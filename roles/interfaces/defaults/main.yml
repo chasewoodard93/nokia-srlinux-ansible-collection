@@ -1,0 +1,77 @@
+---
+# defaults/main.yml - Default variables for interfaces role
+
+# ============================================================================
+# PHYSICAL INTERFACE CONFIGURATION
+# ============================================================================
+
+# Physical interfaces to configure
+# interfaces_physical:
+#   - name: "ethernet-1/1"
+#     admin_state: "enable"
+#     description: "Uplink to spine1"
+#     mtu: 9214
+#     speed: "100G"  # optional, auto-negotiated by default
+#   - name: "ethernet-1/2"
+#     admin_state: "enable"
+#     description: "Uplink to spine2"
+
+interfaces_physical: []
+
+# ============================================================================
+# SUBINTERFACE CONFIGURATION
+# ============================================================================
+
+# Subinterfaces to configure
+# interfaces_subinterfaces:
+#   - interface: "ethernet-1/1"
+#     index: 0
+#     type: "routed"  # routed or bridged
+#     ipv4_address: "10.0.0.1/30"
+#     ipv6_address: "2001:db8::1/64"  # optional
+#     vlan_id: null  # null for untagged, or VLAN ID
+#     description: "P2P link to spine1"
+#   - interface: "ethernet-1/10"
+#     index: 100
+#     type: "bridged"
+#     vlan_id: 100
+#     description: "VLAN 100 access"
+
+interfaces_subinterfaces: []
+
+# ============================================================================
+# DEFAULT SETTINGS
+# ============================================================================
+
+# Default MTU for interfaces
+interfaces_default_mtu: 9214
+
+# Default admin state for new interfaces
+interfaces_default_admin_state: "enable"
+
+# ============================================================================
+# NETWORK INSTANCE ASSIGNMENT
+# ============================================================================
+
+# Default network instance for routed interfaces
+interfaces_default_network_instance: "default"
+
+# Assign interfaces to network instances
+# interfaces_network_instance_bindings:
+#   - interface: "ethernet-1/1"
+#     subinterface: 0
+#     network_instance: "default"
+
+interfaces_network_instance_bindings: []
+
+# ============================================================================
+# PORT BREAKOUT
+# ============================================================================
+
+# Port breakout configuration
+# interfaces_breakout:
+#   - port: "ethernet-1/1"
+#     mode: "4x25G"  # or "4x10G", "2x50G", etc.
+
+interfaces_breakout: []
+

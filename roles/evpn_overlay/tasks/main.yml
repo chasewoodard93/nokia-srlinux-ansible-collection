@@ -1,0 +1,123 @@
+---
+# tasks/main.yml - Main tasks for evpn_overlay role
+# Uses Jinja2 templates with conditional logic for spine vs leaf
+
+- name: "Display role information"
+  debug:
+    msg: "Configuring EVPN overlay on {{ inventory_hostname }} ({{ device_role }})"
+
+# Task 1: Configure EVPN overlay for spines (Route Reflectors)
+- name: "Generate EVPN spine configuration from template"
+  set_fact:
+    evpn_config_lines: "{{ lookup('template', 'evpn_spine.j2') }}"
+  when:
+    - device_role == "spine"
+    - evpn_neighbors is defined
+    - evpn_neighbors | length > 0
+  tags:
+    - evpn
+    - overlay
+    - spine
+
+- name: "Apply EVPN spine configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ evpn_config_lines.split('\n') | select('match', '^set ') | list }}"
+  when:
+    - device_role == "spine"
+    - evpn_neighbors is defined
+    - evpn_neighbors | length > 0
+  register: evpn_spine_config
+  tags:
+    - evpn
+    - overlay
+    - spine
+
+- name: "Display EVPN spine configuration result"
+  debug:
+    msg: "EVPN route reflector configured with {{ evpn_neighbors | length }} clients"
+  when:
+    - device_role == "spine"
+    - evpn_spine_config is defined
+    - evpn_spine_config.changed
+
+# Task 2: Configure EVPN overlay for leafs (VTEPs)
+- name: "Generate EVPN leaf configuration from template"
+  set_fact:
+    evpn_config_lines: "{{ lookup('template', 'evpn_leaf.j2') }}"
+  when:
+    - device_role == "leaf"
+    - evpn_neighbors is defined
+    - evpn_neighbors | length > 0
+  tags:
+    - evpn
+    - overlay
+    - leaf
+
+- name: "Apply EVPN leaf configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ evpn_config_lines.split('\n') | select('match', '^set ') | list }}"
+  when:
+    - device_role == "leaf"
+    - evpn_neighbors is defined
+    - evpn_neighbors | length > 0
+  register: evpn_leaf_config
+  tags:
+    - evpn
+    - overlay
+    - leaf
+
+- name: "Display EVPN leaf configuration result"
+  debug:
+    msg: "EVPN VTEP configured with {{ evpn_neighbors | length }} route reflectors and VXLAN tunnel"
+  when:
+    - device_role == "leaf"
+    - evpn_leaf_config is defined
+    - evpn_leaf_config.changed
+
+# Task 6: Verify EVPN neighbors
+- name: "Verify EVPN neighbor status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ network_instance }} protocols bgp neighbor"
+  register: evpn_neighbor_status
+  tags:
+    - evpn
+    - overlay
+    - verify
+
+- name: "Display EVPN neighbor status"
+  debug:
+    var: evpn_neighbor_status.stdout_lines[0]
+  when: evpn_neighbor_status is defined
+  tags:
+    - evpn
+    - overlay
+    - verify
+
+# Task 7: Verify EVPN routes
+- name: "Verify EVPN routes"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ network_instance }} protocols bgp routes evpn"
+  register: evpn_routes
+  tags:
+    - evpn
+    - overlay
+    - verify
+
+- name: "EVPN overlay configuration complete"
+  debug:
+    msg: "✅ EVPN overlay configured successfully on {{ inventory_hostname }}"
+

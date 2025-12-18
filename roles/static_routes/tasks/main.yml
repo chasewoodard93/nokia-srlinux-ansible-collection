@@ -1,0 +1,54 @@
+---
+# tasks/main.yml - Main tasks for static_routes role
+
+- name: "Display static routes configuration information"
+  debug:
+    msg: "Configuring static routes on {{ inventory_hostname }}"
+
+# Generate and apply static route configuration
+- name: "Generate static route configuration"
+  set_fact:
+    _static_routes_config: "{{ lookup('template', 'static_routes.j2') }}"
+  when: static_routes | length > 0 or static_routes_ipv6 | length > 0
+
+- name: "Apply static route configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _static_routes_config.split('\n') | select('match', '^set ') | list }}"
+  register: static_routes_result
+  when: static_routes | length > 0 or static_routes_ipv6 | length > 0
+
+- name: "Count total routes"
+  set_fact:
+    _total_ipv4_routes: "{{ static_routes | map(attribute='routes') | flatten | length }}"
+    _total_ipv6_routes: "{{ static_routes_ipv6 | map(attribute='routes') | flatten | length }}"
+  when: static_routes | length > 0 or static_routes_ipv6 | length > 0
+
+- name: "Display static route result"
+  debug:
+    msg: "Configured {{ _total_ipv4_routes | default(0) }} IPv4 and {{ _total_ipv6_routes | default(0) }} IPv6 static routes"
+  when: static_routes | length > 0 or static_routes_ipv6 | length > 0
+
+# Verify static route configuration
+- name: "Verify static route configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance default route-table"
+  register: routes_verify
+  ignore_errors: true
+
+- name: "Static routes configuration complete"
+  debug:
+    msg: |
+      ✅ Static Routes Configuration Complete
+      ───────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      IPv4 Routes: {{ _total_ipv4_routes | default(0) }}
+      IPv6 Routes: {{ _total_ipv6_routes | default(0) }}
+      Network Instances: {{ (static_routes + static_routes_ipv6) | map(attribute='network_instance') | unique | list | join(', ') }}
+

@@ -1,0 +1,46 @@
+{# Storm Control configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# Storm Control Interface Configuration                                       #}
+{# ============================================================================ #}
+{% for binding in storm_control_interfaces %}
+{% set policy = storm_control_policies | selectattr('name', 'equalto', binding.policy) | first | default({}) %}
+
+{# Broadcast Storm Control #}
+{% if policy.broadcast is defined or storm_control_broadcast_enabled %}
+{% set bc_rate = policy.broadcast.rate | default(storm_control_default_broadcast_rate) %}
+{% set bc_unit = policy.broadcast.rate_unit | default(storm_control_default_rate_unit) %}
+set / interface {{ binding.interface }} ethernet storm-control broadcast rate {{ bc_rate }}
+{% if bc_unit == 'percentage' %}
+set / interface {{ binding.interface }} ethernet storm-control broadcast units percentage
+{% else %}
+set / interface {{ binding.interface }} ethernet storm-control broadcast units kbps
+{% endif %}
+{% endif %}
+
+{# Multicast Storm Control #}
+{% if policy.multicast is defined or storm_control_multicast_enabled %}
+{% set mc_rate = policy.multicast.rate | default(storm_control_default_multicast_rate) %}
+{% set mc_unit = policy.multicast.rate_unit | default(storm_control_default_rate_unit) %}
+set / interface {{ binding.interface }} ethernet storm-control multicast rate {{ mc_rate }}
+{% if mc_unit == 'percentage' %}
+set / interface {{ binding.interface }} ethernet storm-control multicast units percentage
+{% else %}
+set / interface {{ binding.interface }} ethernet storm-control multicast units kbps
+{% endif %}
+{% endif %}
+
+{# Unknown Unicast Storm Control #}
+{% if policy.unknown_unicast is defined or storm_control_unknown_unicast_enabled %}
+{% set uu_rate = policy.unknown_unicast.rate | default(storm_control_default_unknown_unicast_rate) %}
+{% set uu_unit = policy.unknown_unicast.rate_unit | default(storm_control_default_rate_unit) %}
+set / interface {{ binding.interface }} ethernet storm-control unknown-unicast rate {{ uu_rate }}
+{% if uu_unit == 'percentage' %}
+set / interface {{ binding.interface }} ethernet storm-control unknown-unicast units percentage
+{% else %}
+set / interface {{ binding.interface }} ethernet storm-control unknown-unicast units kbps
+{% endif %}
+{% endif %}
+
+{% endfor %}
+

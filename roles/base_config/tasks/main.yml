@@ -1,0 +1,131 @@
+---
+# tasks/main.yml - Main tasks for base_config role
+# This file orchestrates all the configuration tasks using Jinja2 templates
+
+- name: "Display role information"
+  debug:
+    msg: "Configuring base settings on {{ inventory_hostname }}"
+
+# Task 1: Configure system settings using template
+- name: "Generate system configuration from template"
+  set_fact:
+    system_config_lines: "{{ lookup('template', 'system.j2') }}"
+  tags:
+    - base
+    - system
+
+- name: "Apply system configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ system_config_lines.split('\n') | select('match', '^set ') | list }}"
+  register: system_config
+  tags:
+    - base
+    - system
+
+- name: "Display system configuration result"
+  debug:
+    msg: "System configured: {{ system_config.changed }}"
+  when: system_config is defined
+
+# Task 2: Configure network instance, loopback, and physical interfaces together
+# NOTE: In SR Linux, network instance must be created together with interface assignments
+#       in the same commit, otherwise interfaces with IP addresses will be orphaned
+- name: "Generate loopback configuration from template"
+  set_fact:
+    loopback_config_lines: "{{ lookup('template', 'loopback.j2') }}"
+  tags:
+    - base
+    - interfaces
+    - loopback
+
+- name: "Generate interface configuration from template"
+  set_fact:
+    interface_config_lines: "{{ lookup('template', 'interfaces.j2') }}"
+  when: interfaces is defined and interfaces | length > 0
+  tags:
+    - base
+    - interfaces
+
+- name: "Generate network instance configuration from template"
+  set_fact:
+    network_instance_lines: "{{ lookup('template', 'network_instance.j2') }}"
+  tags:
+    - base
+    - network-instance
+
+- name: "Apply network instance and interface configuration together"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ (network_instance_lines.split('\n') + loopback_config_lines.split('\n') + (interface_config_lines.split('\n') if (interfaces is defined and interfaces | length > 0) else [])) | select('match', '^set ') | list }}"
+  register: interface_config
+  tags:
+    - base
+    - interfaces
+
+- name: "Display interface configuration summary"
+  debug:
+    msg: "Configured network instance with loopback and {{ interfaces | length if interfaces is defined else 0 }} physical interfaces"
+  when: interface_config.changed
+
+# Task 4: Configure LLDP using template
+- name: "Generate LLDP configuration from template"
+  set_fact:
+    lldp_config_lines: "{{ lookup('template', 'lldp.j2') }}"
+  when: enable_lldp | default(true)
+  tags:
+    - base
+    - lldp
+
+- name: "Apply LLDP configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ lldp_config_lines.split('\n') | select('match', '^set ') | list }}"
+  when: enable_lldp | default(true)
+  register: lldp_config
+  tags:
+    - base
+    - lldp
+
+# Task 5: Gather facts after configuration
+- name: "Gather device facts"
+  chasewoodard93.srlinux.srlinux_facts:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+  register: device_facts
+  tags:
+    - base
+    - facts
+
+- name: "Display device facts"
+  debug:
+    msg: |
+      Device: {{ device_facts.ansible_facts.ansible_net_hostname | default(inventory_hostname) }}
+      Model: {{ device_facts.ansible_facts.ansible_net_model | default('N/A') }}
+      Version: {{ device_facts.ansible_facts.ansible_net_version | default('N/A') }}
+  when: device_facts is defined and device_facts.ansible_facts is defined
+
+# Task 6: Verify configuration
+- name: "Verify loopback interface is up"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info from state interface system0"
+  register: verify_loopback
+  tags:
+    - base
+    - verify
+
+- name: "Base configuration complete"
+  debug:
+    msg: "✅ Base configuration completed successfully on {{ inventory_hostname }}"
+

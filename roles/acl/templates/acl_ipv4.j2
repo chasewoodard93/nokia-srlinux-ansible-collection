@@ -1,0 +1,34 @@
+{# Template for IPv4 ACL configuration #}
+{% for acl in acl_ipv4_filters %}
+set / acl acl-filter {{ acl.name }} type ipv4
+{% if acl.description is defined %}
+set / acl acl-filter {{ acl.name }} description "{{ acl.description }}"
+{% endif %}
+{% if acl_enable_statistics %}
+set / acl acl-filter {{ acl.name }} statistics-per-entry true
+{% endif %}
+{% for entry in acl.entries %}
+set / acl acl-filter {{ acl.name }} entry {{ entry.sequence }} action {{ entry.action }}
+{% if entry.description is defined %}
+set / acl acl-filter {{ acl.name }} entry {{ entry.sequence }} description "{{ entry.description }}"
+{% endif %}
+{% if entry.source_prefix is defined %}
+set / acl acl-filter {{ acl.name }} entry {{ entry.sequence }} match ipv4 source-ip prefix {{ entry.source_prefix }}
+{% endif %}
+{% if entry.destination_prefix is defined %}
+set / acl acl-filter {{ acl.name }} entry {{ entry.sequence }} match ipv4 destination-ip prefix {{ entry.destination_prefix }}
+{% endif %}
+{% if entry.protocol is defined %}
+set / acl acl-filter {{ acl.name }} entry {{ entry.sequence }} match ipv4 protocol {{ entry.protocol }}
+{% if entry.protocol == 'tcp' or entry.protocol == 'udp' %}
+{% if entry.source_port is defined %}
+set / acl acl-filter {{ acl.name }} entry {{ entry.sequence }} match transport source-port value {{ entry.source_port }}
+{% endif %}
+{% if entry.destination_port is defined %}
+set / acl acl-filter {{ acl.name }} entry {{ entry.sequence }} match transport destination-port value {{ entry.destination_port }}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+

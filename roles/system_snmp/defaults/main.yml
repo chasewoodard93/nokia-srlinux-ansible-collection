@@ -1,0 +1,79 @@
+---
+# defaults/main.yml - Default variables for system_snmp role
+
+# ============================================================================
+# SNMP BASIC CONFIGURATION
+# ============================================================================
+
+# Enable SNMP
+snmp_enabled: false
+
+# SNMP network instance
+snmp_network_instance: "mgmt"
+
+# SNMP listening address (leave empty for all interfaces)
+snmp_listen_address: ""
+
+# ============================================================================
+# SNMP v2c CONFIGURATION
+# ============================================================================
+
+# SNMP v2c communities
+# snmp_communities:
+#   - name: "public"
+#     permission: "r"  # r (read-only) or rw (read-write)
+#   - name: "private"
+#     permission: "rw"
+
+snmp_communities: []
+
+# ============================================================================
+# SNMP v3 CONFIGURATION
+# ============================================================================
+
+# Enable SNMP v3
+snmp_v3_enabled: false
+
+# SNMP v3 users
+# snmp_v3_users:
+#   - name: "snmpv3user"
+#     auth_type: "md5"  # md5, sha, sha224, sha256, sha384, sha512
+#     auth_password: "authpass123"
+#     priv_type: "aes128"  # des, aes128, aes192, aes256
+#     priv_password: "privpass123"
+#     access: "ro"  # ro (read-only) or rw (read-write)
+
+snmp_v3_users: []
+
+# ============================================================================
+# SNMP SYSTEM INFORMATION
+# ============================================================================
+
+# System contact
+snmp_contact: "Network Operations <netops@example.com>"
+
+# System location
+snmp_location: "Data Center Rack A1"
+
+# ============================================================================
+# SNMP TRAPS
+# ============================================================================
+
+# Enable SNMP traps
+snmp_traps_enabled: false
+
+# Trap destinations
+# snmp_trap_destinations:
+#   - address: "192.168.1.100"
+#     port: 162
+#     community: "public"
+#     version: "v2c"
+
+snmp_trap_destinations: []
+
+# Trap types to enable
+snmp_trap_types:
+  - interface
+  - bgp
+  - system
+

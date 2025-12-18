@@ -1,0 +1,109 @@
+---
+# defaults/main.yml - Default variables for sflow role
+# Traffic sampling for network visibility
+
+# ============================================================================
+# SFLOW GLOBAL CONFIGURATION
+# ============================================================================
+
+# Enable sFlow
+sflow_enabled: true
+
+# sFlow admin state
+sflow_admin_state: "enable"
+
+# sFlow agent address (source IP for sFlow packets)
+# sflow_agent_address: "10.0.0.1"
+
+# Agent address interface (alternative to explicit address)
+# sflow_agent_interface: "system0.0"
+
+# ============================================================================
+# SFLOW COLLECTORS
+# ============================================================================
+
+# sFlow collectors
+# sflow_collectors:
+#   - name: "collector1"
+#     address: "192.168.1.100"
+#     port: 6343
+#     network_instance: "mgmt"
+#   - name: "collector2"
+#     address: "192.168.1.101"
+#     port: 6343
+#     network_instance: "mgmt"
+
+sflow_collectors: []
+
+# Default collector port
+sflow_default_port: 6343
+
+# Default network instance for collectors
+sflow_default_network_instance: "mgmt"
+
+# ============================================================================
+# SAMPLING CONFIGURATION
+# ============================================================================
+
+# Default sampling rate (1 in N packets)
+sflow_sample_rate: 10000
+
+# Sample size (bytes of packet to capture)
+sflow_sample_size: 256
+
+# ============================================================================
+# INTERFACE CONFIGURATION
+# ============================================================================
+
+# Interfaces to enable sFlow on
+# sflow_interfaces:
+#   - name: "ethernet-1/1"
+#     sample_rate: 10000
+#     ingress: true
+#     egress: false
+#   - name: "ethernet-1/2"
+#     sample_rate: 10000
+#     ingress: true
+#     egress: false
+
+sflow_interfaces: []
+
+# Enable sFlow on all interfaces by default
+sflow_all_interfaces: false
+
+# Default ingress sampling
+sflow_default_ingress: true
+
+# Default egress sampling
+sflow_default_egress: false
+
+# ============================================================================
+# POLLING INTERVAL
+# ============================================================================
+
+# Counter polling interval (seconds)
+sflow_polling_interval: 20
+
+# ============================================================================
+# DATAGRAM SETTINGS
+# ============================================================================
+
+# Maximum datagram size
+sflow_max_datagram_size: 1400
+
+# Header bytes to capture
+sflow_header_size: 128
+
+# ============================================================================
+# ADVANCED SETTINGS
+# ============================================================================
+
+# Enable extended router data
+sflow_extended_router: true
+
+# Enable extended gateway data
+sflow_extended_gateway: true
+
+# Enable extended switch data
+sflow_extended_switch: true
+

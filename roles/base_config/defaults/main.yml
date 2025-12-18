@@ -1,0 +1,84 @@
+---
+# defaults/main.yml - Default variables for base_config role
+# These can be overridden in group_vars/, host_vars/, or playbooks
+# Following Ansible best practices for variable precedence
+
+# ============================================================================
+# SYSTEM CONFIGURATION
+# ============================================================================
+
+# System name (defaults to inventory hostname)
+system_name: "{{ inventory_hostname }}"
+
+# System location and contact (should be overridden in group_vars/all.yml)
+system_location: "Data Center"
+system_contact: "Network Operations"
+
+# ============================================================================
+# DNS CONFIGURATION
+# ============================================================================
+
+dns_servers:
+  - 8.8.8.8
+  - 8.8.4.4
+
+# ============================================================================
+# NTP CONFIGURATION
+# ============================================================================
+
+ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+
+# ============================================================================
+# LOOPBACK INTERFACE
+# ============================================================================
+
+# Loopback IP address (MUST be overridden in host_vars/)
+# This is used as BGP router ID and VXLAN source IP
+loopback_ip: "1.1.1.1/32"
+
+# ============================================================================
+# PHYSICAL INTERFACES
+# ============================================================================
+
+# Physical interface configuration (MUST be overridden in host_vars/)
+# Empty by default - each device has unique interface configuration
+interfaces: []
+
+# Example format (defined in host_vars/):
+# interfaces:
+#   - name: ethernet-1/1
+#     peer: spine1
+#     ipv4: "10.0.1.0/31"
+#     admin_state: enable
+#   - name: ethernet-1/2
+#     peer: spine2
+#     ipv4: "10.0.2.0/31"
+#     admin_state: enable
+
+# ============================================================================
+# MANAGEMENT INTERFACE
+# ============================================================================
+
+# Management interface (usually pre-configured by ContainerLab)
+mgmt_interface: mgmt0
+mgmt_network_instance: mgmt
+
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
+
+# Enable LLDP for neighbor discovery
+enable_lldp: true
+
+# Enable IPv6 (disabled by default for IPv4-only fabric)
+enable_ipv6: false
+
+# ============================================================================
+# NETWORK INSTANCE
+# ============================================================================
+
+# Default network instance name
+network_instance: "default"
+

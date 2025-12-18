@@ -1,0 +1,70 @@
+{# BGP advanced configuration template #}
+{# Configures authentication, graceful restart, and transport options #}
+
+{# ============================================================================ #}
+{# Graceful Restart Configuration                                              #}
+{# ============================================================================ #}
+{% if bgp_graceful_restart_enabled | default(true) %}
+set / network-instance {{ network_instance }} protocols bgp graceful-restart admin-state enable
+{% if bgp_graceful_restart_mode | default('helper-only') == 'helper-only' %}
+set / network-instance {{ network_instance }} protocols bgp graceful-restart helper-only true
+{% else %}
+set / network-instance {{ network_instance }} protocols bgp graceful-restart helper-only false
+{% endif %}
+set / network-instance {{ network_instance }} protocols bgp graceful-restart restart-time {{ bgp_graceful_restart_time | default(120) }}
+set / network-instance {{ network_instance }} protocols bgp graceful-restart stale-routes-time {{ bgp_graceful_stale_routes_time | default(360) }}
+{% endif %}
+
+{# ============================================================================ #}
+{# BGP Authentication (Per Peer-Group)                                         #}
+{# ============================================================================ #}
+{% if bgp_authentication_enabled | default(false) and bgp_authentication_key is defined %}
+set / network-instance {{ network_instance }} protocols bgp group underlay authentication-key "{{ bgp_authentication_key }}"
+{% endif %}
+
+{# ============================================================================ #}
+{# Per-Neighbor Authentication                                                 #}
+{# ============================================================================ #}
+{% for auth in bgp_neighbor_authentication %}
+{% if auth.key is defined %}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ auth.neighbor_ip }} authentication-key "{{ auth.key }}"
+{% endif %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# BGP Transport Options                                                       #}
+{# ============================================================================ #}
+{% if bgp_passive_mode | default(false) %}
+set / network-instance {{ network_instance }} protocols bgp group underlay transport passive-mode true
+{% endif %}
+{% if bgp_local_address is defined %}
+set / network-instance {{ network_instance }} protocols bgp group underlay transport local-address {{ bgp_local_address }}
+{% endif %}
+{% if bgp_tcp_mss is defined %}
+set / network-instance {{ network_instance }} protocols bgp group underlay transport tcp-mss {{ bgp_tcp_mss }}
+{% endif %}
+
+{# ============================================================================ #}
+{# TTL Security (GTSM)                                                         #}
+{# ============================================================================ #}
+{% if bgp_ttl_security_enabled | default(false) %}
+set / network-instance {{ network_instance }} protocols bgp group underlay ebgp-default-policy import-reject-all false
+set / network-instance {{ network_instance }} protocols bgp group underlay ebgp-default-policy export-reject-all false
+{% endif %}
+
+{# ============================================================================ #}
+{# Convergence Tuning                                                          #}
+{# ============================================================================ #}
+{% if bgp_min_advertisement_interval is defined %}
+set / network-instance {{ network_instance }} protocols bgp group underlay timers minimum-advertisement-interval {{ bgp_min_advertisement_interval }}
+{% endif %}
+{% if bgp_connect_retry is defined %}
+set / network-instance {{ network_instance }} protocols bgp group underlay timers connect-retry {{ bgp_connect_retry }}
+{% endif %}
+
+{# ============================================================================ #}
+{# Peer Group Timers                                                           #}
+{# ============================================================================ #}
+set / network-instance {{ network_instance }} protocols bgp group underlay timers hold-time {{ bgp_holdtime | default(9) }}
+set / network-instance {{ network_instance }} protocols bgp group underlay timers keepalive-interval {{ bgp_keepalive | default(3) }}
+

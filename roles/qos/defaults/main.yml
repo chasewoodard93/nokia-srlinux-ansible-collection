@@ -1,0 +1,141 @@
+---
+# defaults/main.yml - Default variables for qos role
+
+# ============================================================================
+# QOS CLASSIFIERS (Traffic Classification)
+# ============================================================================
+
+# DSCP-based classifiers
+# qos_dscp_classifiers:
+#   - name: "VOICE"
+#     entries:
+#       - dscp: 46     # EF
+#         forwarding_class: "fc7"
+#       - dscp: 34     # AF41
+#         forwarding_class: "fc6"
+#   - name: "DATA"
+#     entries:
+#       - dscp: 0      # BE
+#         forwarding_class: "fc0"
+#       - dscp: 10     # AF11
+#         forwarding_class: "fc1"
+
+qos_dscp_classifiers: []
+
+# ============================================================================
+# FORWARDING CLASSES
+# ============================================================================
+
+# Forwarding classes (fc0-fc7, fc0 is lowest priority)
+# qos_forwarding_classes:
+#   - name: "fc0"
+#     description: "Best Effort"
+#   - name: "fc1"
+#     description: "Bulk Data"
+#   - name: "fc6"
+#     description: "Video"
+#   - name: "fc7"
+#     description: "Voice"
+
+qos_forwarding_classes: []
+
+# ============================================================================
+# SCHEDULER POLICIES
+# ============================================================================
+
+# Scheduler policies for queue scheduling
+# qos_scheduler_policies:
+#   - name: "EGRESS-POLICY"
+#     tiers:
+#       - tier: 1
+#         scheduler:
+#           - forwarding_class: "fc7"
+#             type: "strict"           # strict priority
+#             weight: 100
+#           - forwarding_class: "fc6"
+#             type: "strict"
+#             weight: 90
+#       - tier: 2
+#         scheduler:
+#           - forwarding_class: "fc1"
+#             type: "dwrr"             # deficit weighted round robin
+#             weight: 30
+#           - forwarding_class: "fc0"
+#             type: "dwrr"
+#             weight: 10
+
+qos_scheduler_policies: []
+
+# ============================================================================
+# INTERFACE QOS POLICY BINDINGS
+# ============================================================================
+
+# Apply QoS policies to interfaces
+# qos_interface_policies:
+#   - interface: "ethernet-1/1"
+#     input:
+#       classifier: "VOICE"
+#     output:
+#       scheduler: "EGRESS-POLICY"
+#   - interface: "ethernet-1/10"
+#     output:
+#       scheduler: "EGRESS-POLICY"
+
+qos_interface_policies: []
+
+# ============================================================================
+# TRAFFIC POLICERS (Rate Limiting)
+# ============================================================================
+
+# Policer profiles for rate limiting
+# qos_policers:
+#   - name: "1GBPS"
+#     peak_rate: 1000000000     # 1 Gbps in bps
+#     max_burst: 125000         # bytes
+#     exceed_action: "drop"     # drop or remark
+#   - name: "100MBPS"
+#     peak_rate: 100000000      # 100 Mbps
+#     max_burst: 12500
+#     exceed_action: "drop"
+
+qos_policers: []
+
+# ============================================================================
+# TRAFFIC SHAPERS
+# ============================================================================
+
+# Shaper profiles for traffic shaping
+# qos_shapers:
+#   - name: "SHAPE-1G"
+#     pir: 1000000000           # Peak information rate (bps)
+#     pbs: 125000               # Peak burst size (bytes)
+
+qos_shapers: []
+
+# ============================================================================
+# DSCP/COS REWRITE POLICIES
+# ============================================================================
+
+# Rewrite DSCP/CoS on egress
+# qos_rewrite_policies:
+#   - name: "REMARK-EGRESS"
+#     entries:
+#       - forwarding_class: "fc7"
+#         dscp: 46              # EF
+#       - forwarding_class: "fc6"
+#         dscp: 34              # AF41
+#       - forwarding_class: "fc0"
+#         dscp: 0               # BE
+
+qos_rewrite_policies: []
+
+# ============================================================================
+# DEFAULT VALUES
+# ============================================================================
+
+# Default forwarding class for unclassified traffic
+qos_default_forwarding_class: "fc0"
+
+# Enable QoS globally
+qos_enabled: true
+

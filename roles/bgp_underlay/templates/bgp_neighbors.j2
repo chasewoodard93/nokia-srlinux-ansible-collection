@@ -1,0 +1,16 @@
+{# BGP neighbor configuration template #}
+{# Configures eBGP neighbors for IP fabric underlay #}
+{# Note: SR Linux uses afi-safi at the neighbor level, not ipv4-unicast directly #}
+
+{% if bgp_neighbors is defined and bgp_neighbors | length > 0 %}
+{% for neighbor in bgp_neighbors %}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} admin-state enable
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} peer-as {{ neighbor.peer_asn }}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} description "{{ neighbor.description | default(neighbor.peer) }}"
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} peer-group underlay
+{% if bgp_ipv4_unicast | default(true) %}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} afi-safi ipv4-unicast admin-state enable
+{% endif %}
+{% endfor %}
+{% endif %}
+

@@ -1,0 +1,63 @@
+---
+# defaults/main.yml - Default variables for static_routes role
+
+# ============================================================================
+# STATIC ROUTE CONFIGURATION
+# ============================================================================
+
+# Static routes to configure
+# static_routes:
+#   - network_instance: "default"
+#     routes:
+#       - prefix: "0.0.0.0/0"
+#         next_hop: "10.0.0.1"
+#         preference: 5
+#         description: "Default route"
+#       - prefix: "192.168.0.0/16"
+#         next_hop: "10.0.0.2"
+#         metric: 100
+#       - prefix: "10.10.0.0/24"
+#         next_hop: "discard"  # null route / blackhole
+#         description: "Blackhole route"
+#   - network_instance: "mgmt"
+#     routes:
+#       - prefix: "0.0.0.0/0"
+#         next_hop: "172.20.20.1"
+
+static_routes: []
+
+# ============================================================================
+# IPv6 STATIC ROUTES
+# ============================================================================
+
+# IPv6 static routes
+# static_routes_ipv6:
+#   - network_instance: "default"
+#     routes:
+#       - prefix: "::/0"
+#         next_hop: "2001:db8::1"
+#       - prefix: "2001:db8:100::/48"
+#         next_hop: "2001:db8::2"
+
+static_routes_ipv6: []
+
+# ============================================================================
+# DEFAULT SETTINGS
+# ============================================================================
+
+# Default administrative preference for static routes
+static_routes_default_preference: 5
+
+# Default metric
+static_routes_default_metric: 1
+
+# ============================================================================
+# BFD FOR STATIC ROUTES
+# ============================================================================
+
+# Enable BFD for static route next-hop tracking
+static_routes_bfd_enabled: false
+
+# BFD profile to use
+static_routes_bfd_profile: "default"
+

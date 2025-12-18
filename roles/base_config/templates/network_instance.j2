@@ -1,0 +1,12 @@
+{# Network instance configuration template #}
+{# Creates the default network instance and assigns interfaces to it #}
+{# This must be done together with interface configuration in SR Linux #}
+
+set / network-instance {{ network_instance | default('default') }} type default
+{% if interfaces is defined and interfaces | length > 0 %}
+{% for interface in interfaces %}
+set / network-instance {{ network_instance | default('default') }} interface {{ interface.name }}.0
+{% endfor %}
+{% endif %}
+set / network-instance {{ network_instance | default('default') }} interface system0.0
+

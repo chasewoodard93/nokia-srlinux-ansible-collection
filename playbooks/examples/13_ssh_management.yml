@@ -1,0 +1,89 @@
+---
+# Example Playbook: SSH Management and Hardening
+# Configures SSH server security settings
+#
+# Usage:
+#   ansible-playbook 13_ssh_management.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - SSH server configuration
+#   - Key exchange and cipher algorithms
+#   - Session limits and timeouts
+#   - Access control configuration
+
+- name: Configure SSH Management
+  hosts: srlinux
+  gather_facts: false
+  vars:
+    # SSH server configuration
+    ssh_server:
+      admin_state: enable
+      timeout: 300
+      max_sessions: 10
+      rate_limit: 60
+      
+    # Allowed key exchange algorithms (secure choices)
+    ssh_key_exchange:
+      - curve25519-sha256
+      - ecdh-sha2-nistp384
+      - ecdh-sha2-nistp521
+      - diffie-hellman-group16-sha512
+      - diffie-hellman-group18-sha512
+      
+    # Allowed ciphers (secure choices)
+    ssh_ciphers:
+      - aes256-gcm@openssh.com
+      - aes128-gcm@openssh.com
+      - aes256-ctr
+      - aes192-ctr
+      - aes128-ctr
+      
+    # Allowed MAC algorithms
+    ssh_macs:
+      - hmac-sha2-512
+      - hmac-sha2-256
+      - hmac-sha2-512-etm@openssh.com
+      - hmac-sha2-256-etm@openssh.com
+      
+    # Host key algorithms
+    ssh_host_key_algorithms:
+      - ssh-ed25519
+      - ecdsa-sha2-nistp384
+      - ecdsa-sha2-nistp521
+      - rsa-sha2-512
+      - rsa-sha2-256
+
+  tasks:
+    - name: Display SSH configuration to be applied
+      ansible.builtin.debug:
+        msg: |
+          SSH Server Settings:
+          - Admin State: {{ ssh_server.admin_state }}
+          - Timeout: {{ ssh_server.timeout }}s
+          - Max Sessions: {{ ssh_server.max_sessions }}
+          - Key Exchange Algorithms: {{ ssh_key_exchange | length }}
+          - Ciphers: {{ ssh_ciphers | length }}
+
+    - name: Apply SSH management configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.ssh_management
+      vars:
+        ssh_management_server: "{{ ssh_server }}"
+        ssh_management_key_exchange: "{{ ssh_key_exchange }}"
+        ssh_management_ciphers: "{{ ssh_ciphers }}"
+        ssh_management_macs: "{{ ssh_macs }}"
+        ssh_management_host_key_algorithms: "{{ ssh_host_key_algorithms }}"
+
+    - name: Verify SSH configuration
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - info from running /system ssh-server
+      register: ssh_status
+
+    - name: Display SSH configuration
+      ansible.builtin.debug:
+        var: ssh_status.stdout_lines
+

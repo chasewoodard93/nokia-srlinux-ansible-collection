@@ -1,0 +1,67 @@
+{# QoS configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# DSCP Classifiers                                                            #}
+{# ============================================================================ #}
+{% for classifier in qos_dscp_classifiers %}
+set / qos classifiers dscp-policy {{ classifier.name }}
+{% for entry in classifier.entries %}
+set / qos classifiers dscp-policy {{ classifier.name }} dscp {{ entry.dscp }} forwarding-class {{ entry.forwarding_class }}
+{% endfor %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# Scheduler Policies                                                          #}
+{# ============================================================================ #}
+{% for policy in qos_scheduler_policies %}
+set / qos scheduler-policies scheduler-policy {{ policy.name }}
+{% for tier in policy.tiers %}
+{% for sched in tier.scheduler %}
+set / qos scheduler-policies scheduler-policy {{ policy.name }} tier {{ tier.tier }} node {{ sched.forwarding_class }} scheduling-type {{ sched.type | default('dwrr') }}
+{% if sched.weight is defined %}
+set / qos scheduler-policies scheduler-policy {{ policy.name }} tier {{ tier.tier }} node {{ sched.forwarding_class }} weight {{ sched.weight }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# Policer Profiles                                                            #}
+{# ============================================================================ #}
+{% for policer in qos_policers %}
+set / qos policers policer-policy {{ policer.name }}
+set / qos policers policer-policy {{ policer.name }} policer single-rate peak-rate {{ policer.peak_rate }}
+set / qos policers policer-policy {{ policer.name }} policer single-rate max-burst-size {{ policer.max_burst | default(125000) }}
+{% if policer.exceed_action is defined %}
+set / qos policers policer-policy {{ policer.name }} policer single-rate exceed-action {{ policer.exceed_action }}
+{% endif %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# Rewrite Policies                                                            #}
+{# ============================================================================ #}
+{% for rewrite in qos_rewrite_policies %}
+set / qos rewrite-policies rewrite-policy {{ rewrite.name }}
+{% for entry in rewrite.entries %}
+set / qos rewrite-policies rewrite-policy {{ rewrite.name }} map forwarding-class {{ entry.forwarding_class }} dscp {{ entry.dscp }}
+{% endfor %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# Interface QoS Policy Application                                           #}
+{# ============================================================================ #}
+{% for binding in qos_interface_policies %}
+{% if binding.input is defined and binding.input.classifier is defined %}
+set / interface {{ binding.interface }} qos input classifiers dscp-policy {{ binding.input.classifier }}
+{% endif %}
+{% if binding.input is defined and binding.input.policer is defined %}
+set / interface {{ binding.interface }} qos input policer input-policer {{ binding.input.policer }}
+{% endif %}
+{% if binding.output is defined and binding.output.scheduler is defined %}
+set / interface {{ binding.interface }} qos output scheduler-policy {{ binding.output.scheduler }}
+{% endif %}
+{% if binding.output is defined and binding.output.rewrite is defined %}
+set / interface {{ binding.interface }} qos output rewrite-policy {{ binding.output.rewrite }}
+{% endif %}
+{% endfor %}
+

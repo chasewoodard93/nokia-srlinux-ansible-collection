@@ -1,0 +1,11 @@
+{# BGP instance configuration template #}
+{# Configures BGP autonomous system, router ID, and address families #}
+{# Note: SR Linux requires at least one address family to be enabled #}
+
+set / network-instance {{ network_instance }} protocols bgp admin-state enable
+set / network-instance {{ network_instance }} protocols bgp autonomous-system {{ bgp_asn }}
+set / network-instance {{ network_instance }} protocols bgp router-id {{ bgp_router_id }}
+{% if bgp_ipv4_unicast | default(true) %}
+set / network-instance {{ network_instance }} protocols bgp afi-safi ipv4-unicast admin-state enable
+{% endif %}
+

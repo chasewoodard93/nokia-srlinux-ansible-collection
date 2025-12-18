@@ -1,0 +1,61 @@
+---
+# tasks/main.yml - Main tasks for acl role
+
+- name: "Display ACL configuration information"
+  debug:
+    msg: "Configuring ACLs on {{ inventory_hostname }}"
+
+# Configure IPv4 ACLs
+- name: "Generate IPv4 ACL configuration"
+  set_fact:
+    _acl_ipv4_config: "{{ lookup('template', 'acl_ipv4.j2') }}"
+  when: acl_ipv4_filters | length > 0
+
+- name: "Apply IPv4 ACL configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _acl_ipv4_config.split('\n') | select('match', '^set ') | list }}"
+  register: acl_ipv4_result
+  when: acl_ipv4_filters | length > 0
+
+- name: "Display IPv4 ACL result"
+  debug:
+    msg: "Configured {{ acl_ipv4_filters | length }} IPv4 ACLs"
+  when: acl_ipv4_filters | length > 0
+
+# Apply ACLs to interfaces
+- name: "Apply ACLs to interfaces"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / interface {{ item.interface }} subinterface {{ item.subinterface | default(0) }} acl input ipv4-filter {{ item.ipv4_filter_input }}"
+  loop: "{{ acl_interface_bindings }}"
+  when: 
+    - acl_interface_bindings | length > 0
+    - item.ipv4_filter_input is defined
+    - item.ipv4_filter_input | length > 0
+
+# Verify ACL configuration
+- name: "Verify ACL configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info acl"
+  register: acl_verify
+
+- name: "ACL configuration complete"
+  debug:
+    msg: |
+      ✅ ACL Configuration Complete
+      ────────────────────────────
+      Device: {{ inventory_hostname }}
+      IPv4 ACLs: {{ acl_ipv4_filters | length }}
+      IPv6 ACLs: {{ acl_ipv6_filters | length }}
+      Interface Bindings: {{ acl_interface_bindings | length }}
+

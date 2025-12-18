@@ -1,0 +1,55 @@
+{# ESI Multi-Homing configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# Ethernet Segment Configuration                                              #}
+{# ============================================================================ #}
+{% for es in ethernet_segments %}
+
+{# Configure Ethernet Segment on system level #}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} admin-state enable
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} esi {{ es.esi }}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} interface {{ es.interface }}
+
+{# Multi-homing mode #}
+{% if es.multi_homing_mode is defined %}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} multi-homing-mode {{ es.multi_homing_mode }}
+{% else %}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} multi-homing-mode all-active
+{% endif %}
+
+{# DF Election Configuration #}
+{% if es.df_election is defined %}
+{% if es.df_election.algorithm is defined %}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} df-election algorithm {{ es.df_election.algorithm }}
+{% endif %}
+{% if es.df_election.preference is defined %}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} df-election preference {{ es.df_election.preference }}
+{% endif %}
+{% if es.df_election.revertive is defined %}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} df-election revertive {{ es.df_election.revertive | lower }}
+{% endif %}
+{% endif %}
+
+{# Activation Timer #}
+{% if es.activation_timer is defined %}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 ethernet-segment {{ es.name }} df-election activation-timer {{ es.activation_timer }}
+{% endif %}
+
+{% endfor %}
+
+{# ============================================================================ #}
+{# Global EVPN Multi-Homing Settings                                           #}
+{# ============================================================================ #}
+
+{# DF Election Wait Timer #}
+{% if df_election_wait_timer is defined %}
+set / system network-instance protocols evpn ethernet-segments bgp-instance 1 df-election timers activation-timer {{ df_election_wait_timer }}
+{% endif %}
+
+{# MAC Mobility Duplicate Detection #}
+{% if mac_mobility_duplicate_detection | default(true) %}
+set / system network-instance protocols bgp-vpn bgp-instance 1 mac-mobility duplicate-detection-enabled true
+set / system network-instance protocols bgp-vpn bgp-instance 1 mac-mobility detection-threshold {{ mac_mobility_threshold | default(5) }}
+set / system network-instance protocols bgp-vpn bgp-instance 1 mac-mobility detection-window {{ mac_mobility_window | default(180) }}
+{% endif %}
+

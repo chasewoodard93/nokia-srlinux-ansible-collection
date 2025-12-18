@@ -1,0 +1,132 @@
+---
+# defaults/main.yml - Default variables for evpn_overlay role
+# These can be overridden in group_vars/, host_vars/, or playbooks
+# Following Ansible best practices for variable precedence
+
+# ============================================================================
+# DEVICE ROLE
+# ============================================================================
+
+# Device role determines configuration template to use
+# Should be overridden in group_vars/spines.yml or group_vars/leafs.yml
+device_role: "leaf"  # Options: "spine" or "leaf"
+
+# ============================================================================
+# BGP EVPN CONFIGURATION
+# ============================================================================
+
+# BGP AS number (inherited from bgp_underlay role)
+bgp_asn: 65000
+
+# BGP router ID (derived from loopback IP)
+bgp_router_id: "{{ loopback_ip.split('/')[0] }}"
+
+# ============================================================================
+# EVPN NEIGHBORS
+# ============================================================================
+
+# EVPN neighbor configuration (MUST be defined in host_vars/)
+# Empty by default - each device has unique neighbor configuration
+evpn_neighbors: []
+
+# Example for leaf (defined in host_vars/):
+# evpn_neighbors:
+#   - peer: spine1
+#     peer_ip: "1.1.1.1"  # spine1 loopback
+#     peer_asn: 65000
+#     description: "spine1-RR"
+#   - peer: spine2
+#     peer_ip: "1.1.1.2"  # spine2 loopback
+#     peer_asn: 65000
+#     description: "spine2-RR"
+
+# Example for spine (defined in host_vars/):
+# evpn_neighbors:
+#   - peer: leaf1
+#     peer_ip: "2.2.2.1"  # leaf1 loopback
+#     peer_asn: 65001
+#     description: "leaf1-EVPN"
+#   - peer: leaf2
+#     peer_ip: "2.2.2.2"  # leaf2 loopback
+#     peer_asn: 65002
+#     description: "leaf2-EVPN"
+
+# ============================================================================
+# ROUTE REFLECTOR CONFIGURATION (Spines Only)
+# ============================================================================
+
+# Enable route reflector functionality
+# Should be overridden in group_vars/spines.yml
+route_reflector: false
+
+# Route reflector cluster ID (MUST be defined in host_vars/ for spines)
+# Typically set to the spine's loopback IP
+route_reflector_cluster_id: "{{ bgp_router_id }}"
+
+# ============================================================================
+# VXLAN CONFIGURATION (Leafs Only)
+# ============================================================================
+
+# VXLAN tunnel interface name
+vxlan_interface: "vxlan1"
+
+# VXLAN source interface (loopback used as VTEP source IP)
+vxlan_source_interface: "system0"
+
+# ============================================================================
+# NETWORK INSTANCE
+# ============================================================================
+
+# Network instance (VRF) name
+network_instance: "default"
+
+# ============================================================================
+# EVPN CAPABILITIES
+# ============================================================================
+
+# Advertise IPv4 unicast routes in EVPN
+evpn_advertise_ipv4_unicast: true
+
+# Advertise IPv6 unicast routes in EVPN (disabled by default)
+evpn_advertise_ipv6_unicast: false
+
+# ============================================================================
+# BGP TIMERS FOR EVPN
+# ============================================================================
+
+# EVPN keepalive interval (seconds) - should be overridden in group_vars/all.yml
+evpn_keepalive: 3
+
+# EVPN hold time (seconds) - should be overridden in group_vars/all.yml
+evpn_holdtime: 9
+
+# ============================================================================
+# EVPN AUTHENTICATION
+# ============================================================================
+
+# Enable EVPN BGP authentication
+evpn_authentication_enabled: false
+
+# Authentication key for EVPN sessions
+# evpn_authentication_key: "evpn_secret"
+
+# ============================================================================
+# EVPN GRACEFUL RESTART
+# ============================================================================
+
+# Enable graceful restart for EVPN sessions
+evpn_graceful_restart_enabled: true
+
+# EVPN graceful restart mode
+evpn_graceful_restart_mode: "helper-only"
+
+# ============================================================================
+# ROUTE REFLECTOR ADVANCED OPTIONS
+# ============================================================================
+
+# Enable route reflector client-to-client reflection
+route_reflector_client_to_client: true
+
+# Next-hop handling for RR (preserve or change)
+route_reflector_preserve_nexthop: true
+

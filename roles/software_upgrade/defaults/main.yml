@@ -1,0 +1,100 @@
+---
+# defaults/main.yml - Default variables for software_upgrade role
+
+# ============================================================================
+# SOFTWARE IMAGE CONFIGURATION
+# ============================================================================
+
+# Target software version (leave empty to skip upgrade)
+# software_target_version: "24.7.2"
+
+software_target_version: ""
+
+# Software image source (URL, file path, or SCP)
+# software_image_source: "scp://user@server/path/to/srlinux-24.7.2.bin"
+# software_image_source: "/tmp/srlinux-24.7.2.bin"
+# software_image_source: "https://download.nokia.com/srlinux-24.7.2.bin"
+
+software_image_source: ""
+
+# ============================================================================
+# PRE-UPGRADE CHECKS
+# ============================================================================
+
+# Perform pre-upgrade health check
+software_pre_check_enabled: true
+
+# Minimum free disk space required (MB)
+software_min_disk_space: 2000
+
+# Require all BGP sessions established
+software_require_bgp_up: true
+
+# Require all configured interfaces up
+software_require_interfaces_up: true
+
+# Create configuration backup before upgrade
+software_backup_before_upgrade: true
+
+# ============================================================================
+# UPGRADE OPTIONS
+# ============================================================================
+
+# Upgrade mode: "immediate" or "scheduled"
+software_upgrade_mode: "immediate"
+
+# Scheduled upgrade time (ISO 8601 format)
+# software_scheduled_time: "2024-01-15T02:00:00"
+
+# Reboot after image installation
+software_auto_reboot: false
+
+# Wait for device to come back online after reboot
+software_wait_for_reboot: true
+
+# Timeout waiting for device after reboot (seconds)
+software_reboot_timeout: 600
+
+# ============================================================================
+# POST-UPGRADE VALIDATION
+# ============================================================================
+
+# Perform post-upgrade validation
+software_post_check_enabled: true
+
+# Verify BGP sessions re-establish after upgrade
+software_verify_bgp_after: true
+
+# Maximum wait time for BGP to re-establish (seconds)
+software_bgp_convergence_timeout: 300
+
+# ============================================================================
+# ROLLBACK CONFIGURATION
+# ============================================================================
+
+# Enable automatic rollback on failure
+software_auto_rollback: false
+
+# Rollback if post-checks fail
+software_rollback_on_failure: true
+
+# ============================================================================
+# IMAGE MANAGEMENT
+# ============================================================================
+
+# Clean up old images after successful upgrade
+software_cleanup_old_images: false
+
+# Number of old images to keep
+software_images_to_keep: 2
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+# Log upgrade progress to file
+software_log_enabled: true
+
+# Log file path
+software_log_path: "/var/log/srlinux_upgrades"
+

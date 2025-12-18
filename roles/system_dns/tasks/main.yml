@@ -1,0 +1,47 @@
+---
+# tasks/main.yml - Main tasks for system_dns role
+
+- name: "Display DNS configuration information"
+  debug:
+    msg: "Configuring DNS on {{ inventory_hostname }}"
+
+# Generate and apply DNS configuration
+- name: "Generate DNS configuration"
+  set_fact:
+    _dns_config: "{{ lookup('template', 'dns.j2') }}"
+  when: dns_enabled
+
+- name: "Apply DNS configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _dns_config.split('\n') | select('match', '^set ') | list }}"
+  register: dns_config_result
+  when: dns_enabled
+
+- name: "Display DNS configuration result"
+  debug:
+    msg: "Configured {{ dns_servers | length }} DNS servers"
+  when: dns_enabled
+
+# Verify DNS configuration
+- name: "Verify DNS configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info system dns"
+  register: dns_verify
+
+- name: "DNS configuration complete"
+  debug:
+    msg: |
+      ✅ DNS Configuration Complete
+      ────────────────────────────
+      Device: {{ inventory_hostname }}
+      DNS Servers: {{ dns_servers | join(', ') }}
+      Search Domains: {{ dns_search_domains | join(', ') if dns_search_domains | length > 0 else 'None' }}
+      Network Instance: {{ dns_network_instance }}
+

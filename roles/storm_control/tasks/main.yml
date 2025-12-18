@@ -1,0 +1,70 @@
+---
+# tasks/main.yml - Main tasks for storm_control role
+
+- name: "Display storm control configuration info"
+  debug:
+    msg: "Configuring storm control on {{ inventory_hostname }}"
+
+# Generate storm control configuration
+- name: "Generate storm control configuration"
+  template:
+    src: storm_control.j2
+    dest: "/tmp/{{ inventory_hostname }}_storm_control.cfg"
+  delegate_to: localhost
+  when: storm_control_interfaces | length > 0
+
+- name: "Read storm control configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_storm_control.cfg"
+  register: storm_config_raw
+  delegate_to: localhost
+  when: storm_control_interfaces | length > 0
+
+- name: "Parse storm control commands"
+  set_fact:
+    storm_commands: "{{ (storm_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: storm_control_interfaces | length > 0
+
+# Apply storm control configuration
+- name: "Apply storm control configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ storm_commands }}"
+  register: storm_result
+  when: 
+    - storm_control_interfaces | length > 0
+    - storm_commands | length > 0
+
+# Verify storm control
+- name: "Verify storm control configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show interface * ethernet storm-control"
+  register: storm_status
+  when: storm_control_interfaces | length > 0
+
+- name: "Display storm control summary"
+  debug:
+    msg: |
+      ✅ Storm Control Configuration Complete
+      ───────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Interfaces Configured: {{ storm_control_interfaces | length }}
+      Policies Defined: {{ storm_control_policies | length }}
+      {% for intf in storm_control_interfaces %}
+      - {{ intf.interface }}: {{ intf.policy }}
+      {% endfor %}
+  when: storm_control_interfaces | length > 0
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_storm_control.cfg"
+    state: absent
+  delegate_to: localhost
+

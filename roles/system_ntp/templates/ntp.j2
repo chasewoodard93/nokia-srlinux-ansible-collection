@@ -1,0 +1,12 @@
+{# Template for NTP configuration #}
+{% if ntp_enabled %}
+set / system ntp admin-state enable
+set / system ntp network-instance {{ ntp_network_instance }}
+{% for server in ntp_servers %}
+set / system ntp server {{ server.address }}
+{% if server.prefer | default(false) %}
+set / system ntp server {{ server.address }} prefer true
+{% endif %}
+{% endfor %}
+{% endif %}
+

@@ -1,0 +1,64 @@
+---
+# defaults/main.yml - Default variables for lag role
+
+# ============================================================================
+# LAG CONFIGURATION
+# ============================================================================
+
+# LAG interfaces to configure
+# lag_interfaces:
+#   - name: "lag1"
+#     description: "LAG to server1"
+#     admin_state: "enable"
+#     lacp_mode: "active"  # active, passive, or static (no LACP)
+#     lacp_interval: "fast"  # fast (1s) or slow (30s)
+#     min_links: 1
+#     members:
+#       - "ethernet-1/1"
+#       - "ethernet-1/2"
+#     subinterfaces:
+#       - index: 0
+#         type: "routed"
+#         ipv4_address: "10.0.0.1/30"
+#       - index: 100
+#         type: "bridged"
+#         vlan_id: 100
+
+lag_interfaces: []
+
+# ============================================================================
+# LACP DEFAULTS
+# ============================================================================
+
+# Default LACP mode
+lag_default_lacp_mode: "active"
+
+# Default LACP interval
+lag_default_lacp_interval: "fast"
+
+# Default minimum links
+lag_default_min_links: 1
+
+# ============================================================================
+# LAG LOAD BALANCING
+# ============================================================================
+
+# Load balancing hash algorithm
+# Options: layer-2, layer-3, layer-4
+lag_hash_algorithm: "layer-4"
+
+# Include source/destination in hash
+lag_hash_symmetric: true
+
+# ============================================================================
+# EVPN MULTI-HOMING (ESI-LAG)
+# ============================================================================
+
+# Configure ESI for EVPN multi-homing
+# lag_esi:
+#   - lag: "lag1"
+#     esi: "00:01:01:01:01:01:01:01:01:01"
+#     multi_homing_mode: "all-active"  # all-active or single-active
+
+lag_esi: []
+

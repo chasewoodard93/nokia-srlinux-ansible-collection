@@ -1,0 +1,100 @@
+---
+# defaults/main.yml - Default variables for mirroring role
+# Port mirroring/SPAN for troubleshooting and monitoring
+
+# ============================================================================
+# MIRRORING DESTINATIONS
+# ============================================================================
+
+# Local mirroring destinations (local SPAN)
+# mirroring_destinations:
+#   - name: "monitor-1"
+#     type: "local"
+#     destination_interface: "ethernet-1/48"
+#     admin_state: "enable"
+#   - name: "erspan-1"
+#     type: "remote"
+#     destination_address: "192.168.100.50"
+#     source_address: "10.0.0.1"
+#     encapsulation: "gre"
+#     network_instance: "default"
+
+mirroring_destinations: []
+
+# ============================================================================
+# MIRRORING SOURCES
+# ============================================================================
+
+# Mirroring source configuration
+# mirroring_sources:
+#   - name: "source-1"
+#     destination: "monitor-1"
+#     interfaces:
+#       - name: "ethernet-1/1"
+#         direction: "ingress-egress"  # ingress, egress, ingress-egress
+#       - name: "ethernet-1/2"
+#         direction: "ingress"
+#   - name: "source-2"
+#     destination: "monitor-1"
+#     subinterfaces:
+#       - name: "ethernet-1/3.100"
+#         direction: "egress"
+
+mirroring_sources: []
+
+# ============================================================================
+# ACL-BASED MIRRORING
+# ============================================================================
+
+# ACL-based mirroring (selective traffic)
+# acl_mirroring:
+#   - name: "mirror-web-traffic"
+#     destination: "monitor-1"
+#     acl_name: "web-traffic-acl"
+#     direction: "ingress"
+
+acl_mirroring: []
+
+# ============================================================================
+# DEFAULT SETTINGS
+# ============================================================================
+
+# Default mirroring direction
+mirroring_default_direction: "ingress-egress"
+
+# Default admin state
+mirroring_default_admin_state: "enable"
+
+# ============================================================================
+# ERSPAN SETTINGS (Remote Mirroring)
+# ============================================================================
+
+# ERSPAN version (type II or type III)
+erspan_version: 2
+
+# ERSPAN DSCP marking
+erspan_dscp: 0
+
+# ERSPAN TTL
+erspan_ttl: 255
+
+# ============================================================================
+# MIRRORING LIMITS
+# ============================================================================
+
+# Maximum mirroring sessions
+mirroring_max_sessions: 4
+
+# Rate limit for mirrored traffic (kbps, 0 = no limit)
+mirroring_rate_limit: 0
+
+# ============================================================================
+# SAMPLING
+# ============================================================================
+
+# Enable sampling for mirrored traffic
+mirroring_sampling_enabled: false
+
+# Sampling rate (1 in N packets)
+mirroring_sampling_rate: 1000
+

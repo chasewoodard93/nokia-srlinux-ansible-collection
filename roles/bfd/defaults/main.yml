@@ -1,0 +1,97 @@
+---
+# defaults/main.yml - Default variables for bfd role
+
+# ============================================================================
+# BFD GLOBAL CONFIGURATION
+# ============================================================================
+
+# Enable BFD globally
+bfd_enabled: true
+
+# ============================================================================
+# BFD SUBINTERFACE CONFIGURATION
+# ============================================================================
+
+# BFD on subinterfaces
+# bfd_subinterfaces:
+#   - interface: "ethernet-1/1.0"
+#     admin_state: "enable"
+#     desired_minimum_transmit_interval: 100000  # microseconds (100ms)
+#     required_minimum_receive: 100000           # microseconds
+#     detection_multiplier: 3
+#     minimum_echo_receive_interval: 0           # 0 = disable echo
+#   - interface: "ethernet-1/2.0"
+#     admin_state: "enable"
+
+bfd_subinterfaces: []
+
+# ============================================================================
+# BFD DEFAULT TIMERS
+# ============================================================================
+
+# Default desired minimum transmit interval (microseconds)
+# 100000 = 100ms, 300000 = 300ms, 1000000 = 1s
+bfd_default_tx_interval: 100000
+
+# Default required minimum receive interval (microseconds)
+bfd_default_rx_interval: 100000
+
+# Default detection multiplier (session down after multiplier * interval)
+bfd_default_detection_multiplier: 3
+
+# Default echo receive interval (0 = disable echo mode)
+bfd_default_echo_interval: 0
+
+# ============================================================================
+# BFD FOR BGP
+# ============================================================================
+
+# Enable BFD for BGP sessions
+# bfd_bgp:
+#   - network_instance: "default"
+#     neighbor: "10.0.0.1"
+#     enable: true
+
+bfd_bgp: []
+
+# ============================================================================
+# BFD FOR OSPF
+# ============================================================================
+
+# Enable BFD for OSPF interfaces
+# bfd_ospf:
+#   - network_instance: "default"
+#     instance_id: 0
+#     area: "0.0.0.0"
+#     interface: "ethernet-1/1.0"
+#     enable: true
+
+bfd_ospf: []
+
+# ============================================================================
+# BFD FOR STATIC ROUTES
+# ============================================================================
+
+# Enable BFD for static route next-hops
+# bfd_static:
+#   - network_instance: "default"
+#     prefix: "0.0.0.0/0"
+#     next_hop: "10.0.0.1"
+#     enable: true
+
+bfd_static: []
+
+# ============================================================================
+# MICRO-BFD FOR LAG
+# ============================================================================
+
+# Micro-BFD configuration for LAG interfaces
+# bfd_micro_lag:
+#   - lag: "lag1"
+#     admin_state: "enable"
+#     desired_minimum_transmit_interval: 100000
+#     required_minimum_receive: 100000
+#     detection_multiplier: 3
+
+bfd_micro_lag: []
+

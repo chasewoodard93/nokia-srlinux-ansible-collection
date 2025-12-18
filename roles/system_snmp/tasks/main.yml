@@ -1,0 +1,56 @@
+---
+# tasks/main.yml - Main tasks for system_snmp role
+
+- name: "Display SNMP configuration information"
+  debug:
+    msg: "Configuring SNMP on {{ inventory_hostname }}"
+
+- name: "Skip SNMP configuration if not enabled"
+  debug:
+    msg: "SNMP is disabled, skipping configuration"
+  when: not snmp_enabled
+
+# Generate and apply SNMP configuration
+- name: "Generate SNMP configuration"
+  set_fact:
+    _snmp_config: "{{ lookup('template', 'snmp.j2') }}"
+  when: snmp_enabled
+
+- name: "Apply SNMP configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _snmp_config.split('\n') | select('match', '^set ') | list }}"
+  register: snmp_config_result
+  when: snmp_enabled
+
+- name: "Display SNMP configuration result"
+  debug:
+    msg: "SNMP configuration applied"
+  when: snmp_enabled
+
+# Verify SNMP configuration
+- name: "Verify SNMP configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info system snmp"
+  register: snmp_verify
+  when: snmp_enabled
+
+- name: "SNMP configuration complete"
+  debug:
+    msg: |
+      ✅ SNMP Configuration Complete
+      ──────────────────────────────
+      Device: {{ inventory_hostname }}
+      SNMP Enabled: {{ snmp_enabled }}
+      Communities: {{ snmp_communities | length }}
+      SNMPv3 Users: {{ snmp_v3_users | length }}
+      Trap Destinations: {{ snmp_trap_destinations | length }}
+      Network Instance: {{ snmp_network_instance }}
+  when: snmp_enabled
+

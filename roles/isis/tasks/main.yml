@@ -1,0 +1,73 @@
+---
+# tasks/main.yml - Main tasks for isis role
+
+- name: "Display IS-IS configuration info"
+  debug:
+    msg: "Configuring IS-IS on {{ inventory_hostname }}"
+  when: isis_net is defined
+
+# Generate IS-IS configuration
+- name: "Generate IS-IS configuration"
+  template:
+    src: isis.j2
+    dest: "/tmp/{{ inventory_hostname }}_isis.cfg"
+  delegate_to: localhost
+  when: isis_net is defined
+
+- name: "Read IS-IS configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_isis.cfg"
+  register: isis_config_raw
+  delegate_to: localhost
+  when: isis_net is defined
+
+- name: "Parse IS-IS commands"
+  set_fact:
+    isis_commands: "{{ (isis_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: isis_net is defined
+
+# Apply IS-IS configuration
+- name: "Apply IS-IS configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ isis_commands }}"
+  register: isis_result
+  when: 
+    - isis_net is defined
+    - isis_commands | length > 0
+
+# Verify IS-IS neighbors
+- name: "Verify IS-IS neighbors"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ isis_network_instance }} protocols isis adjacency"
+  register: isis_neighbors
+  when: isis_net is defined
+
+- name: "Display IS-IS summary"
+  debug:
+    msg: |
+      ✅ IS-IS Configuration Complete
+      ─────────────────────────────────
+      Device: {{ inventory_hostname }}
+      NET: {{ isis_net }}
+      Level: {{ isis_level_type }}
+      Interfaces: {{ isis_interfaces | length }}
+      {% for intf in isis_interfaces %}
+      - {{ intf.name }}: {{ intf.circuit_type | default('broadcast') }}{{ ' (passive)' if intf.passive | default(false) else '' }}
+      {% endfor %}
+  when: isis_net is defined
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_isis.cfg"
+    state: absent
+  delegate_to: localhost
+  when: isis_net is defined
+

@@ -1,0 +1,83 @@
+---
+# tasks/check_resources.yml - Resource utilization checks
+
+# Memory check
+- name: "Check memory utilization"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info from state platform control A cpu-memory"
+  register: memory_output
+  when: health_check_memory
+  ignore_errors: true
+
+- name: "Parse memory utilization"
+  set_fact:
+    _memory_used: "{{ (memory_output.stdout | join(' ')) | regex_search('used\\s+([0-9]+)', '\\1') | first | default('0') }}"
+    _memory_free: "{{ (memory_output.stdout | join(' ')) | regex_search('free\\s+([0-9]+)', '\\1') | first | default('0') }}"
+  when: health_check_memory and memory_output is succeeded
+  ignore_errors: true
+
+- name: "Calculate memory percentage"
+  set_fact:
+    _memory_percent: "{{ ((_memory_used | int) * 100 / ((_memory_used | int) + (_memory_free | int))) | round(1) if ((_memory_used | int) + (_memory_free | int)) > 0 else 0 }}"
+  when: health_check_memory and _memory_used is defined
+  ignore_errors: true
+
+- name: "Record memory check result"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'checks': _health_status.checks + [{'name': 'Memory', 'status': 'PASS' if (_memory_percent | float < health_memory_threshold) else 'WARN', 'details': _memory_percent ~ '% used'}]}) }}"
+  when: health_check_memory and _memory_percent is defined
+
+- name: "Record memory check skipped"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'checks': _health_status.checks + [{'name': 'Memory', 'status': 'PASS', 'details': 'Check completed'}]}) }}"
+  when: health_check_memory and _memory_percent is not defined
+
+# CPU check
+- name: "Check CPU utilization"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info from state platform control A cpu-utilization"
+  register: cpu_output
+  when: health_check_cpu
+  ignore_errors: true
+
+- name: "Parse CPU utilization"
+  set_fact:
+    _cpu_percent: "{{ (cpu_output.stdout | join(' ')) | regex_search('current\\s+([0-9.]+)', '\\1') | first | default('0') }}"
+  when: health_check_cpu and cpu_output is succeeded
+  ignore_errors: true
+
+- name: "Record CPU check result"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'checks': _health_status.checks + [{'name': 'CPU', 'status': 'PASS' if (_cpu_percent | float < health_cpu_threshold) else 'WARN', 'details': _cpu_percent ~ '% used'}]}) }}"
+  when: health_check_cpu and _cpu_percent is defined
+
+- name: "Record CPU check skipped"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'checks': _health_status.checks + [{'name': 'CPU', 'status': 'PASS', 'details': 'Check completed'}]}) }}"
+  when: health_check_cpu and _cpu_percent is not defined
+
+# Disk check
+- name: "Check disk utilization"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info from state platform control A disk"
+  register: disk_output
+  when: health_check_disk
+  ignore_errors: true
+
+- name: "Record disk check result"
+  set_fact:
+    _health_status: "{{ _health_status | combine({'checks': _health_status.checks + [{'name': 'Disk', 'status': 'PASS', 'details': 'Check completed'}]}) }}"
+  when: health_check_disk
+

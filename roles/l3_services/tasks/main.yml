@@ -1,0 +1,174 @@
+---
+# tasks/main.yml - Main tasks for l3_services role
+
+- name: "Display role information"
+  debug:
+    msg: "Configuring L3 services on {{ inventory_hostname }}"
+
+# Task 1: Create IP-VRF network instances
+- name: "Create IP-VRF network instances"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.name }} type ip-vrf"
+      - "set / network-instance {{ item.name }} description \"{{ item.description }}\""
+      - "set / network-instance {{ item.name }} admin-state enable"
+  loop: "{{ ip_vrfs }}"
+  when: ip_vrfs is defined and ip_vrfs | length > 0
+  register: ip_vrf_create
+  tags:
+    - l3
+    - ip-vrf
+
+- name: "Display IP-VRF creation summary"
+  debug:
+    msg: "Created {{ ip_vrfs | length }} IP-VRFs"
+  when: ip_vrfs is defined and ip_vrfs | length > 0
+
+# Task 2: Configure route distinguisher and route targets
+- name: "Configure route distinguisher and route targets"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.name }} protocols bgp-vpn bgp-instance 1 route-distinguisher rd {{ item.route_distinguisher }}"
+      - "set / network-instance {{ item.name }} protocols bgp-vpn bgp-instance 1 route-target export-rt {{ item.route_target_export }}"
+      - "set / network-instance {{ item.name }} protocols bgp-vpn bgp-instance 1 route-target import-rt {{ item.route_target_import }}"
+  loop: "{{ ip_vrfs }}"
+  when: ip_vrfs is defined and ip_vrfs | length > 0
+  register: rd_rt_config
+  tags:
+    - l3
+    - ip-vrf
+    - evpn
+
+# Task 3: Configure VXLAN VNI for IP-VRF
+- name: "Configure VXLAN VNI for IP-VRFs"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.name }} vxlan-interface {{ vxlan_interface }}.{{ item.vni }}"
+      - "set / tunnel-interface {{ vxlan_interface }} vxlan-interface {{ item.vni }} type routed"
+      - "set / tunnel-interface {{ vxlan_interface }} vxlan-interface {{ item.vni }} ingress vni {{ item.vni }}"
+  loop: "{{ ip_vrfs }}"
+  when: ip_vrfs is defined and ip_vrfs | length > 0
+  register: vxlan_l3_vni_config
+  tags:
+    - l3
+    - ip-vrf
+    - vxlan
+
+# Task 4: Configure IRB interfaces
+- name: "Configure IRB interfaces"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / interface {{ irb_interface_prefix }}{{ item.1.vlan }} admin-state enable"
+      - "set / interface {{ irb_interface_prefix }}{{ item.1.vlan }} subinterface 0 admin-state enable"
+      - "set / interface {{ irb_interface_prefix }}{{ item.1.vlan }} subinterface 0 ipv4 admin-state enable"
+      - "set / interface {{ irb_interface_prefix }}{{ item.1.vlan }} subinterface 0 ipv4 address {{ item.1.ipv4 }}"
+      - "set / network-instance {{ item.0.name }} interface {{ irb_interface_prefix }}{{ item.1.vlan }}.0"
+  with_subelements:
+    - "{{ ip_vrfs | default([]) }}"
+    - irb_interfaces
+    - skip_missing: true
+  when:
+    - ip_vrfs is defined
+    - ip_vrfs | length > 0
+  register: irb_config
+  tags:
+    - l3
+    - ip-vrf
+    - irb
+
+# Task 5: Configure anycast gateway
+- name: "Configure anycast gateway"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / interface {{ irb_interface_prefix }}{{ item.1.vlan }} subinterface 0 anycast-gw virtual-router-id 1"
+      - "set / interface {{ irb_interface_prefix }}{{ item.1.vlan }} subinterface 0 anycast-gw virtual-router-mac {{ anycast_gw_mac }}"
+  with_subelements:
+    - "{{ ip_vrfs | default([]) }}"
+    - irb_interfaces
+    - skip_missing: true
+  when:
+    - ip_vrfs is defined
+    - ip_vrfs | length > 0
+    - item.1.anycast_gw | default(false)
+  register: anycast_gw_config
+  tags:
+    - l3
+    - ip-vrf
+    - irb
+    - anycast
+
+# Task 6: Link IRB to MAC-VRF
+- name: "Link IRB interface to MAC-VRF"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.1.mac_vrf }} interface {{ irb_interface_prefix }}{{ item.1.vlan }}.0"
+  with_subelements:
+    - "{{ ip_vrfs | default([]) }}"
+    - irb_interfaces
+    - skip_missing: true
+  when:
+    - ip_vrfs is defined
+    - ip_vrfs | length > 0
+    - item.1.mac_vrf is defined
+  register: irb_mac_vrf_link
+  tags:
+    - l3
+    - ip-vrf
+    - irb
+
+# Task 7: Configure EVPN for IP-VRF
+- name: "Configure EVPN for IP-VRFs"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / network-instance {{ item.name }} protocols bgp-evpn bgp-instance 1 admin-state enable"
+      - "set / network-instance {{ item.name }} protocols bgp-evpn bgp-instance 1 vxlan-interface {{ vxlan_interface }}.{{ item.vni }}"
+      - "set / network-instance {{ item.name }} protocols bgp-evpn bgp-instance 1 evi {{ item.vni }}"
+  loop: "{{ ip_vrfs }}"
+  when: ip_vrfs is defined and ip_vrfs | length > 0
+  register: evpn_ip_vrf_config
+  tags:
+    - l3
+    - ip-vrf
+    - evpn
+
+# Task 8: Verify IP-VRF status
+- name: "Verify IP-VRF routing table"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ item.name }} route-table"
+  loop: "{{ ip_vrfs }}"
+  when: ip_vrfs is defined and ip_vrfs | length > 0
+  register: ip_vrf_routes
+  tags:
+    - l3
+    - ip-vrf
+    - verify
+
+- name: "L3 services configuration complete"
+  debug:
+    msg: "✅ L3 services configured successfully on {{ inventory_hostname }}"
+

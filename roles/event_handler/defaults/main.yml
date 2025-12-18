@@ -1,0 +1,102 @@
+---
+# defaults/main.yml - Default variables for event_handler role
+# SR Linux event handler configuration for automation
+
+# ============================================================================
+# EVENT HANDLER INSTANCES
+# ============================================================================
+
+# Event handler instances
+# event_handlers:
+#   - name: "interface-down-alert"
+#     admin_state: "enable"
+#     upython_script: |
+#       from srlinux.mgmt.cli import CliPlugin
+#       from srlinux.syntax import Syntax
+#       
+#       def event_handler_main(in_json_str):
+#           import json
+#           event = json.loads(in_json_str)
+#           # Process event
+#           return json.dumps({"result": "success"})
+#     paths:
+#       - "/interface[name=ethernet-*]/oper-state"
+#     options:
+#       debug: false
+#   - name: "bgp-peer-monitor"
+#     admin_state: "enable"
+#     script_path: "/etc/opt/srlinux/eventmgr/bgp_monitor.py"
+#     paths:
+#       - "/network-instance[name=*]/protocols/bgp/neighbor[peer-address=*]/session-state"
+
+event_handlers: []
+
+# ============================================================================
+# EVENT HANDLER SCRIPTS DIRECTORY
+# ============================================================================
+
+# Directory for event handler scripts
+event_handler_script_dir: "/etc/opt/srlinux/eventmgr"
+
+# ============================================================================
+# COMMON EVENT PATHS
+# ============================================================================
+
+# Interface state changes
+event_path_interface_state: "/interface[name=*]/oper-state"
+
+# BGP session state changes
+event_path_bgp_session: "/network-instance[name=*]/protocols/bgp/neighbor[peer-address=*]/session-state"
+
+# System health
+event_path_system_health: "/platform/control[slot=*]/cpu[index=*]/total/instant"
+
+# Memory utilization
+event_path_memory: "/platform/control[slot=*]/memory/utilization"
+
+# ============================================================================
+# SCRIPT TEMPLATES
+# ============================================================================
+
+# Deploy script templates
+# event_handler_scripts:
+#   - name: "interface_monitor.py"
+#     content: |
+#       #!/usr/bin/env python3
+#       import json
+#       def event_handler_main(in_json_str):
+#           event = json.loads(in_json_str)
+#           return json.dumps({"status": "processed"})
+
+event_handler_scripts: []
+
+# ============================================================================
+# RATE LIMITING
+# ============================================================================
+
+# Minimum interval between handler executions (seconds)
+event_handler_min_interval: 1
+
+# Maximum events to queue
+event_handler_max_queue: 100
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+# Enable event handler logging
+event_handler_logging: true
+
+# Log level: debug, info, warning, error
+event_handler_log_level: "info"
+
+# ============================================================================
+# DEFAULTS
+# ============================================================================
+
+# Default admin state for handlers
+event_handler_default_state: "enable"
+
+# Default timeout for script execution (seconds)
+event_handler_timeout: 30
+

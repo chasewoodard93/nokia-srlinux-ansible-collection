@@ -1,0 +1,72 @@
+---
+# tasks/main.yml - Main tasks for system_ntp role
+
+- name: "Display NTP configuration information"
+  debug:
+    msg: "Configuring NTP on {{ inventory_hostname }}"
+
+# Configure timezone
+- name: "Configure system timezone"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines:
+      - "set / system clock timezone {{ ntp_timezone }}"
+  register: timezone_result
+
+- name: "Display timezone result"
+  debug:
+    msg: "Timezone set to {{ ntp_timezone }}"
+
+# Generate and apply NTP configuration
+- name: "Generate NTP configuration"
+  set_fact:
+    _ntp_config: "{{ lookup('template', 'ntp.j2') }}"
+  when: ntp_enabled
+
+- name: "Apply NTP configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _ntp_config.split('\n') | select('match', '^set ') | list }}"
+  register: ntp_config_result
+  when: ntp_enabled
+
+- name: "Display NTP configuration result"
+  debug:
+    msg: "Configured {{ ntp_servers | length }} NTP servers"
+  when: ntp_enabled
+
+# Verify NTP status
+- name: "Verify NTP configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info system ntp"
+  register: ntp_verify
+
+- name: "Check NTP synchronization status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system ntp"
+  register: ntp_status
+  ignore_errors: true
+
+- name: "NTP configuration complete"
+  debug:
+    msg: |
+      ✅ NTP Configuration Complete
+      ────────────────────────────
+      Device: {{ inventory_hostname }}
+      Timezone: {{ ntp_timezone }}
+      NTP Enabled: {{ ntp_enabled }}
+      NTP Servers: {{ ntp_servers | map(attribute='address') | list | join(', ') }}
+      Network Instance: {{ ntp_network_instance }}
+

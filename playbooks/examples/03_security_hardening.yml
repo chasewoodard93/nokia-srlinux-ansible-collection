@@ -1,0 +1,100 @@
+---
+# 03_security_hardening.yml - Security Hardening Playbook
+# Configures ACLs, CPM filters, and SNMP
+#
+# Usage:
+#   ansible-playbook 03_security_hardening.yml -i inventory/hosts.yml
+
+- name: "Security Hardening"
+  hosts: all
+  gather_facts: false
+  
+  vars:
+    # ─────────────────────────────────────────────────────────
+    # ACL Configuration
+    # ─────────────────────────────────────────────────────────
+    acl_ipv4_filters:
+      - name: "MGMT-ACCESS"
+        description: "Restrict management access"
+        entries:
+          - sequence: 10
+            action: "accept"
+            description: "Allow SSH from management"
+            source_prefix: "10.0.0.0/8"
+            protocol: "tcp"
+            destination_port: 22
+          - sequence: 20
+            action: "accept"
+            description: "Allow SNMP from monitoring"
+            source_prefix: "10.0.0.0/8"
+            protocol: "udp"
+            destination_port: 161
+          - sequence: 1000
+            action: "drop"
+            description: "Deny all other management"
+
+    # ─────────────────────────────────────────────────────────
+    # CPM Filter Configuration (Control Plane Protection)
+    # ─────────────────────────────────────────────────────────
+    cpm_filter_entries:
+      - sequence: 100
+        action: "accept"
+        description: "Allow BGP"
+        protocol: "tcp"
+        destination_port: 179
+      - sequence: 110
+        action: "accept"
+        description: "Allow SSH"
+        protocol: "tcp"
+        destination_port: 22
+      - sequence: 120
+        action: "accept"
+        description: "Allow ICMP"
+        protocol: "icmp"
+      - sequence: 130
+        action: "accept"
+        description: "Allow BFD"
+        protocol: "udp"
+        destination_port: 3784
+
+    # ─────────────────────────────────────────────────────────
+    # SNMP Configuration
+    # ─────────────────────────────────────────────────────────
+    snmp_enabled: true
+    snmp_network_instance: "mgmt"
+    snmp_contact: "Network Operations <netops@example.com>"
+    snmp_location: "Data Center - Rack A1"
+    snmp_communities:
+      - name: "public_ro"
+        permission: "r"
+    snmp_v3_enabled: true
+    snmp_v3_users:
+      - name: "snmpv3admin"
+        auth_type: "sha256"
+        auth_password: "AuthPass123!"
+        priv_type: "aes128"
+        priv_password: "PrivPass123!"
+
+  tasks:
+    - name: "Configure ACLs"
+      import_role:
+        name: chasewoodard93.srlinux.acl
+
+    - name: "Configure CPM Filters"
+      import_role:
+        name: chasewoodard93.srlinux.cpm_filter
+
+    - name: "Configure SNMP"
+      import_role:
+        name: chasewoodard93.srlinux.system_snmp
+
+    - name: "Security Hardening Complete"
+      debug:
+        msg: |
+          ✅ Security Hardening Complete
+          ──────────────────────────────
+          Device: {{ inventory_hostname }}
+          ACLs: {{ acl_ipv4_filters | length }} configured
+          CPM Entries: {{ cpm_filter_entries | length }} configured
+          SNMP: Enabled with {{ snmp_communities | length }} communities, {{ snmp_v3_users | length }} v3 users
+

@@ -1,0 +1,76 @@
+{# PIM configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# PIM Global Configuration                                                    #}
+{# ============================================================================ #}
+{% if pim_interfaces | length > 0 or pim_static_rp | length > 0 %}
+set / network-instance {{ pim_network_instance }} protocols pim admin-state {{ pim_admin_state }}
+
+{# ============================================================================ #}
+{# PIM Interfaces                                                              #}
+{# ============================================================================ #}
+{% for intf in pim_interfaces %}
+set / network-instance {{ pim_network_instance }} protocols pim interface {{ intf.name }} admin-state {{ intf.admin_state | default(pim_default_interface_state) }}
+{% if intf.dr_priority is defined %}
+set / network-instance {{ pim_network_instance }} protocols pim interface {{ intf.name }} dr-priority {{ intf.dr_priority }}
+{% endif %}
+{% if intf.hello_interval is defined %}
+set / network-instance {{ pim_network_instance }} protocols pim interface {{ intf.name }} hello-interval {{ intf.hello_interval }}
+{% endif %}
+{% if intf.bfd | default(false) %}
+set / network-instance {{ pim_network_instance }} protocols pim interface {{ intf.name }} bfd-enabled true
+{% endif %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# Static RP Configuration                                                     #}
+{# ============================================================================ #}
+{% for rp in pim_static_rp %}
+{% for group in rp.group_ranges %}
+set / network-instance {{ pim_network_instance }} protocols pim rp static group {{ group }} rp-address {{ rp.address }}
+{% endfor %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# BSR Configuration                                                           #}
+{# ============================================================================ #}
+{% if pim_bsr_enabled | default(false) %}
+{% if pim_bsr_candidate is defined %}
+set / network-instance {{ pim_network_instance }} protocols pim rp bsr bsr-candidate admin-state enable
+set / network-instance {{ pim_network_instance }} protocols pim rp bsr bsr-candidate interface {{ pim_bsr_candidate.interface }}
+{% if pim_bsr_candidate.priority is defined %}
+set / network-instance {{ pim_network_instance }} protocols pim rp bsr bsr-candidate priority {{ pim_bsr_candidate.priority }}
+{% endif %}
+{% endif %}
+{% if pim_rp_candidate is defined %}
+set / network-instance {{ pim_network_instance }} protocols pim rp bsr rp-candidate admin-state enable
+set / network-instance {{ pim_network_instance }} protocols pim rp bsr rp-candidate interface {{ pim_rp_candidate.interface }}
+{% if pim_rp_candidate.priority is defined %}
+set / network-instance {{ pim_network_instance }} protocols pim rp bsr rp-candidate priority {{ pim_rp_candidate.priority }}
+{% endif %}
+{% for group in pim_rp_candidate.group_ranges | default([]) %}
+set / network-instance {{ pim_network_instance }} protocols pim rp bsr rp-candidate group-range {{ group }}
+{% endfor %}
+{% endif %}
+{% endif %}
+
+{# ============================================================================ #}
+{# SSM Configuration                                                           #}
+{# ============================================================================ #}
+{% if pim_ssm_enabled | default(false) %}
+set / network-instance {{ pim_network_instance }} protocols pim ssm admin-state enable
+set / network-instance {{ pim_network_instance }} protocols pim ssm group-range {{ pim_ssm_range }}
+{% endif %}
+
+{# ============================================================================ #}
+{# IGMP Configuration on PIM Interfaces                                        #}
+{# ============================================================================ #}
+{% if pim_igmp_enabled | default(true) %}
+{% for intf in pim_interfaces %}
+set / network-instance {{ pim_network_instance }} protocols igmp interface {{ intf.name }} admin-state enable
+set / network-instance {{ pim_network_instance }} protocols igmp interface {{ intf.name }} version {{ pim_igmp_version | default(3) }}
+{% endfor %}
+{% endif %}
+
+{% endif %}
+

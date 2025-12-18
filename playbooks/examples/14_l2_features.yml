@@ -1,0 +1,124 @@
+---
+# Example Playbook: L2 Features Configuration
+# Configures DHCP relay, storm control, IGMP snooping, and sFlow
+#
+# Usage:
+#   ansible-playbook 14_l2_features.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - DHCP relay agent configuration
+#   - Storm control for broadcast/multicast limiting
+#   - IGMP snooping for multicast optimization
+#   - sFlow for traffic sampling
+
+- name: Configure L2 Features
+  hosts: leaf
+  gather_facts: false
+  vars:
+    # DHCP Relay configuration
+    dhcp_relay_config:
+      enabled: true
+      relays:
+        - network_instance: tenant-1-vrf
+          admin_state: enable
+          servers:
+            - 10.100.0.10
+            - 10.100.0.11
+          source_interface: system0.0
+          
+    # Storm control configuration
+    storm_control_config:
+      enabled: true
+      interfaces:
+        - name: ethernet-1/10
+          broadcast:
+            units: percentage
+            rate: 10
+          multicast:
+            units: percentage
+            rate: 20
+          unknown_unicast:
+            units: percentage
+            rate: 10
+        - name: ethernet-1/11
+          broadcast:
+            units: kbps
+            rate: 10000
+            
+    # IGMP snooping configuration
+    igmp_snooping_config:
+      enabled: true
+      network_instances:
+        - name: mac-vrf-100
+          admin_state: enable
+          proxy_reporting: true
+          fast_leave: true
+          querier:
+            admin_state: enable
+            address: 10.0.0.1
+            query_interval: 125
+            
+    # sFlow configuration
+    sflow_config:
+      enabled: true
+      admin_state: enable
+      sample_rate: 1000
+      sample_size: 256
+      collectors:
+        - address: 10.100.0.50
+          port: 6343
+      interfaces:
+        - ethernet-1/1
+        - ethernet-1/2
+        - ethernet-1/10
+
+  tasks:
+    - name: Configure DHCP Relay
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.dhcp_relay
+      vars:
+        dhcp_relay_enabled: "{{ dhcp_relay_config.enabled }}"
+        dhcp_relay_instances: "{{ dhcp_relay_config.relays }}"
+      when: dhcp_relay_config.enabled
+
+    - name: Configure Storm Control
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.storm_control
+      vars:
+        storm_control_enabled: "{{ storm_control_config.enabled }}"
+        storm_control_interfaces: "{{ storm_control_config.interfaces }}"
+      when: storm_control_config.enabled
+
+    - name: Configure IGMP Snooping
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.igmp_snooping
+      vars:
+        igmp_snooping_enabled: "{{ igmp_snooping_config.enabled }}"
+        igmp_snooping_instances: "{{ igmp_snooping_config.network_instances }}"
+      when: igmp_snooping_config.enabled
+
+    - name: Configure sFlow
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.sflow
+      vars:
+        sflow_enabled: "{{ sflow_config.enabled }}"
+        sflow_admin_state: "{{ sflow_config.admin_state }}"
+        sflow_sample_rate: "{{ sflow_config.sample_rate }}"
+        sflow_collectors: "{{ sflow_config.collectors }}"
+        sflow_interfaces: "{{ sflow_config.interfaces }}"
+      when: sflow_config.enabled
+
+    - name: Verify L2 features
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - show system sflow status
+          - info from running /system storm-control
+      register: l2_status
+
+    - name: Display L2 feature status
+      ansible.builtin.debug:
+        var: l2_status.stdout_lines
+

@@ -1,0 +1,62 @@
+---
+# defaults/main.yml - Default variables for config_backup role
+
+# ============================================================================
+# BACKUP DIRECTORY CONFIGURATION
+# ============================================================================
+
+# Base directory for storing backups
+backup_base_dir: "/var/backups/srlinux"
+
+# Create subdirectory per device (true = /backups/hostname/, false = /backups/)
+backup_per_device: true
+
+# Create subdirectory by date (true = /backups/hostname/2024-01-15/)
+backup_per_date: false
+
+# ============================================================================
+# BACKUP FILE CONFIGURATION
+# ============================================================================
+
+# Include timestamp in filename
+backup_include_timestamp: true
+
+# Backup file format: 'set' (CLI commands) or 'json'
+backup_format: "set"
+
+# Configuration type: 'running' or 'startup'
+backup_config_type: "running"
+
+# Custom filename prefix (default: hostname)
+# backup_filename_prefix: "mydevice"
+
+# ============================================================================
+# BACKUP RETENTION
+# ============================================================================
+
+# Enable automatic cleanup of old backups
+backup_retention_enabled: false
+
+# Number of days to retain backups (only if retention is enabled)
+backup_retention_days: 30
+
+# Maximum number of backups to keep per device (0 = unlimited)
+backup_max_files: 0
+
+# ============================================================================
+# BACKUP VERIFICATION
+# ============================================================================
+
+# Verify backup was created successfully
+backup_verify: true
+
+# Minimum expected file size in bytes (0 = no minimum)
+backup_min_size: 100
+
+# ============================================================================
+# NOTIFICATIONS
+# ============================================================================
+
+# Print backup summary at end of role
+backup_show_summary: true
+

@@ -1,0 +1,22 @@
+{# EVPN overlay configuration for spine switches (Route Reflectors) #}
+{# Configures iBGP EVPN neighbors with route reflector functionality #}
+
+{# First, create the evpn-overlay peer group #}
+set / network-instance {{ network_instance }} protocols bgp group evpn-overlay admin-state enable
+set / network-instance {{ network_instance }} protocols bgp group evpn-overlay description "EVPN overlay peer group"
+set / network-instance {{ network_instance }} protocols bgp group evpn-overlay afi-safi evpn admin-state enable
+
+{% if evpn_neighbors is defined and evpn_neighbors | length > 0 %}
+{% for neighbor in evpn_neighbors %}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} admin-state enable
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} peer-as {{ neighbor.peer_asn }}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} description "{{ neighbor.description | default(neighbor.peer) }}"
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} peer-group evpn-overlay
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} afi-safi evpn admin-state enable
+{% if route_reflector | default(false) %}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} route-reflector client true
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} route-reflector cluster-id {{ route_reflector_cluster_id }}
+{% endif %}
+{% endfor %}
+{% endif %}
+

@@ -1,0 +1,47 @@
+---
+# tasks/main.yml - Main tasks for cpm_filter role
+
+- name: "Display CPM filter configuration information"
+  debug:
+    msg: "Configuring Control Plane Protection filters on {{ inventory_hostname }}"
+
+# Generate and apply CPM filter configuration
+- name: "Generate CPM filter configuration"
+  set_fact:
+    _cpm_config: "{{ lookup('template', 'cpm_filter.j2') }}"
+  when: cpm_filter_entries | length > 0
+
+- name: "Apply CPM filter configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _cpm_config.split('\n') | select('match', '^set ') | list }}"
+  register: cpm_config_result
+  when: cpm_filter_entries | length > 0
+
+- name: "Display CPM filter result"
+  debug:
+    msg: "Configured {{ cpm_filter_entries | length }} CPM filter entries"
+  when: cpm_filter_entries | length > 0
+
+# Verify CPM filter configuration
+- name: "Verify CPM filter configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info acl cpm-filter"
+  register: cpm_verify
+
+- name: "CPM filter configuration complete"
+  debug:
+    msg: |
+      ✅ CPM Filter Configuration Complete
+      ────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Filter Entries: {{ cpm_filter_entries | length }}
+      Rate Limiting: {{ cpm_rate_limit_enabled }}
+      Log Drops: {{ cpm_log_drops }}
+

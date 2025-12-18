@@ -1,0 +1,43 @@
+---
+# 07_health_check.yml - Device Health Check
+#
+# Usage:
+#   ansible-playbook 07_health_check.yml -i inventory/hosts.yml
+
+- name: "Device Health Check"
+  hosts: all
+  gather_facts: false
+  
+  vars:
+    # Health check thresholds
+    health_check_cpu_threshold: 80
+    health_check_memory_threshold: 80
+    health_check_disk_threshold: 85
+    
+    # What to check
+    health_check_system: true
+    health_check_interfaces: true
+    health_check_bgp: true
+    health_check_resources: true
+
+  tasks:
+    - name: "Run Health Check"
+      import_role:
+        name: chasewoodard93.srlinux.health_check
+
+    - name: "Generate Health Report"
+      debug:
+        msg: |
+          ═══════════════════════════════════════════════════════════
+          📊 HEALTH CHECK REPORT - {{ inventory_hostname }}
+          ═══════════════════════════════════════════════════════════
+          
+          Status: {{ srlinux_health_status | default('UNKNOWN') }}
+          
+          Thresholds:
+            CPU: < {{ health_check_cpu_threshold }}%
+            Memory: < {{ health_check_memory_threshold }}%
+            Disk: < {{ health_check_disk_threshold }}%
+          
+          ═══════════════════════════════════════════════════════════
+

@@ -1,0 +1,51 @@
+{# SSH Server configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# SSH Server Basic Configuration                                              #}
+{# ============================================================================ #}
+{% if ssh_enabled | default(true) %}
+set / system ssh-server admin-state {{ ssh_admin_state | default('enable') }}
+set / system ssh-server network-instance {{ ssh_network_instance | default('mgmt') }}
+{% if ssh_port != 22 %}
+set / system ssh-server port {{ ssh_port }}
+{% endif %}
+{% endif %}
+
+{# ============================================================================ #}
+{# SSH Session Limits                                                          #}
+{# ============================================================================ #}
+{% if ssh_max_sessions is defined %}
+set / system ssh-server max-sessions {{ ssh_max_sessions }}
+{% endif %}
+{% if ssh_idle_timeout is defined and ssh_idle_timeout > 0 %}
+set / system ssh-server idle-timeout {{ ssh_idle_timeout }}
+{% endif %}
+
+{# ============================================================================ #}
+{# SSH Banner Configuration                                                    #}
+{# ============================================================================ #}
+{% if ssh_banner_enabled | default(true) %}
+set / system banner login-banner "{{ ssh_banner_message | default('Authorized Access Only') | replace('\n', '\\n') }}"
+{% endif %}
+
+{# ============================================================================ #}
+{# SSH Authorized Keys                                                         #}
+{# ============================================================================ #}
+{% for user_keys in ssh_authorized_keys %}
+{% for key in user_keys.keys %}
+set / system aaa authentication user {{ user_keys.user }} ssh-key "{{ key }}"
+{% endfor %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# SSH Access Control (via system filter)                                      #}
+{# ============================================================================ #}
+{% if ssh_allowed_networks | length > 0 %}
+{% for idx in range(ssh_allowed_networks | length) %}
+set / acl cpm-filter ipv4-filter entry {{ 100 + idx }} description "Allow SSH from {{ ssh_allowed_networks[idx] }}"
+set / acl cpm-filter ipv4-filter entry {{ 100 + idx }} match ipv4 source-ip prefix {{ ssh_allowed_networks[idx] }}
+set / acl cpm-filter ipv4-filter entry {{ 100 + idx }} match transport destination-port value 22
+set / acl cpm-filter ipv4-filter entry {{ 100 + idx }} action accept
+{% endfor %}
+{% endif %}
+

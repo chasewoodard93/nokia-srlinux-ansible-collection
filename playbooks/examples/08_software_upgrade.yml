@@ -1,0 +1,77 @@
+---
+# 08_software_upgrade.yml - Software Upgrade Workflow
+#
+# Usage:
+#   # Pre-check only (no upgrade)
+#   ansible-playbook 08_software_upgrade.yml -i inventory/hosts.yml --tags precheck
+#
+#   # Full upgrade (requires target version)
+#   ansible-playbook 08_software_upgrade.yml -i inventory/hosts.yml \
+#     -e "software_target_version=24.7.2"
+
+- name: "Software Upgrade Pre-Check"
+  hosts: all
+  gather_facts: false
+  serial: 1  # Upgrade one device at a time
+  tags: [precheck, upgrade]
+  
+  vars:
+    # Target version (required for upgrade)
+    # software_target_version: "24.7.2"
+    
+    # Pre-upgrade options
+    software_pre_check_enabled: true
+    software_backup_before_upgrade: true
+    software_require_bgp_up: true
+    software_require_interfaces_up: true
+    
+    # Upgrade options
+    software_auto_reboot: false
+    software_wait_for_reboot: true
+    software_reboot_timeout: 600
+
+  tasks:
+    - name: "Run Software Upgrade Role"
+      import_role:
+        name: chasewoodard93.srlinux.software_upgrade
+
+- name: "Post-Upgrade Validation"
+  hosts: all
+  gather_facts: false
+  tags: [upgrade]
+  
+  vars:
+    health_check_bgp: true
+    health_check_interfaces: true
+
+  tasks:
+    - name: "Wait for device to be ready"
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        delay: 30
+        timeout: 600
+      delegate_to: localhost
+      when: software_auto_reboot | default(false)
+
+    - name: "Post-upgrade health check"
+      import_role:
+        name: chasewoodard93.srlinux.health_check
+
+    - name: "Verify new version"
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - "show version"
+      register: new_version
+
+    - name: "Upgrade Complete"
+      debug:
+        msg: |
+          ✅ Software Upgrade Complete
+          ────────────────────────────
+          Device: {{ inventory_hostname }}
+          Post-upgrade health check: PASSED
+

@@ -1,0 +1,52 @@
+---
+# defaults/main.yml - Default variables for system_ntp role
+
+# ============================================================================
+# NTP CONFIGURATION
+# ============================================================================
+
+# Enable NTP
+ntp_enabled: true
+
+# NTP servers to configure
+# ntp_servers:
+#   - address: "0.pool.ntp.org"
+#     prefer: true
+#   - address: "1.pool.ntp.org"
+#   - address: "192.168.1.10"
+#     prefer: true
+
+ntp_servers:
+  - address: "0.pool.ntp.org"
+  - address: "1.pool.ntp.org"
+
+# ============================================================================
+# TIMEZONE CONFIGURATION
+# ============================================================================
+
+# System timezone (IANA format)
+# Examples: UTC, America/New_York, Europe/London, Asia/Tokyo
+ntp_timezone: "UTC"
+
+# ============================================================================
+# NTP NETWORK INSTANCE
+# ============================================================================
+
+# Network instance to use for NTP (mgmt or default)
+ntp_network_instance: "mgmt"
+
+# ============================================================================
+# NTP AUTHENTICATION (Optional)
+# ============================================================================
+
+# Enable NTP authentication
+ntp_auth_enabled: false
+
+# NTP authentication keys
+# ntp_auth_keys:
+#   - id: 1
+#     type: "md5"
+#     key: "ntp_secret_key"
+
+ntp_auth_keys: []
+

@@ -1,0 +1,96 @@
+---
+# Example Playbook: IS-IS Routing Protocol Configuration
+# Configures IS-IS for underlay routing in data center fabrics
+#
+# Usage:
+#   ansible-playbook 16_isis.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - IS-IS instance configuration
+#   - Level-1/Level-2 routing
+#   - Interface configuration with BFD
+#   - Authentication and metric configuration
+
+- name: Configure IS-IS Routing Protocol
+  hosts: srlinux
+  gather_facts: false
+  vars:
+    # IS-IS instance configuration
+    isis_instance:
+      name: default
+      admin_state: enable
+      level_capability: level-2
+      net: "49.0001.0100.0000.0001.00"
+      max_ecmp_paths: 8
+      overload:
+        admin_state: disable
+        max_metric: false
+      lsp:
+        lifetime: 1200
+        refresh_interval: 600
+      spf:
+        initial_wait: 50
+        second_wait: 200
+        max_wait: 5000
+      
+    # IS-IS interfaces
+    isis_interfaces:
+      - name: ethernet-1/1
+        admin_state: enable
+        circuit_type: point-to-point
+        level: level-2
+        passive: false
+        metric: 10
+        bfd: true
+        authentication:
+          key: "IS1S_K3y!"
+          
+      - name: ethernet-1/2
+        admin_state: enable
+        circuit_type: point-to-point
+        level: level-2
+        passive: false
+        metric: 10
+        bfd: true
+        
+      - name: system0.0
+        admin_state: enable
+        passive: true
+
+  tasks:
+    - name: Display IS-IS configuration
+      ansible.builtin.debug:
+        msg: |
+          IS-IS Instance: {{ isis_instance.name }}
+          - NET: {{ isis_instance.net }}
+          - Level: {{ isis_instance.level_capability }}
+          - ECMP Paths: {{ isis_instance.max_ecmp_paths }}
+          
+          Interfaces: {{ isis_interfaces | length }}
+          {% for intf in isis_interfaces %}
+          - {{ intf.name }}: {{ intf.circuit_type | default('broadcast') }}{% if intf.passive %} (passive){% endif %}
+          {% endfor %}
+
+    - name: Apply IS-IS configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.isis
+      vars:
+        isis_enabled: true
+        isis_config: "{{ isis_instance }}"
+        isis_interface_list: "{{ isis_interfaces }}"
+
+    - name: Verify IS-IS configuration
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - show network-instance default protocols isis adjacency
+          - show network-instance default protocols isis interface
+          - show network-instance default protocols isis database
+      register: isis_status
+
+    - name: Display IS-IS status
+      ansible.builtin.debug:
+        var: isis_status.stdout_lines
+

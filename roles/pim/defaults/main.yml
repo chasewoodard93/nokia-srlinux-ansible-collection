@@ -1,0 +1,120 @@
+---
+# defaults/main.yml - Default variables for pim role
+# Protocol Independent Multicast configuration
+
+# ============================================================================
+# PIM INSTANCE CONFIGURATION
+# ============================================================================
+
+# Network instance for PIM
+pim_network_instance: "default"
+
+# PIM admin state
+pim_admin_state: "enable"
+
+# ============================================================================
+# PIM INTERFACES
+# ============================================================================
+
+# PIM interfaces
+# pim_interfaces:
+#   - name: "ethernet-1/1.0"
+#     admin_state: "enable"
+#     mode: "sparse"           # sparse, dense, sparse-dense
+#     dr_priority: 1
+#     hello_interval: 30
+#     bfd: false
+#   - name: "irb0.100"
+#     admin_state: "enable"
+#     mode: "sparse"
+
+pim_interfaces: []
+
+# ============================================================================
+# PIM RENDEZVOUS POINT (RP)
+# ============================================================================
+
+# Static RP configuration
+# pim_static_rp:
+#   - address: "10.0.0.1"
+#     group_ranges:
+#       - "224.0.0.0/4"
+#   - address: "10.0.0.2"
+#     group_ranges:
+#       - "239.0.0.0/8"
+
+pim_static_rp: []
+
+# ============================================================================
+# PIM BSR (BOOTSTRAP ROUTER)
+# ============================================================================
+
+# Enable BSR
+pim_bsr_enabled: false
+
+# BSR candidate configuration
+# pim_bsr_candidate:
+#   interface: "system0.0"
+#   priority: 64
+#   hash_mask_length: 30
+
+# RP candidate configuration
+# pim_rp_candidate:
+#   interface: "system0.0"
+#   priority: 192
+#   group_ranges:
+#     - "224.0.0.0/4"
+
+# ============================================================================
+# PIM SSM (SOURCE SPECIFIC MULTICAST)
+# ============================================================================
+
+# Enable SSM
+pim_ssm_enabled: false
+
+# SSM group range
+pim_ssm_range: "232.0.0.0/8"
+
+# ============================================================================
+# PIM TIMERS
+# ============================================================================
+
+# Hello interval (seconds)
+pim_hello_interval: 30
+
+# Join/Prune interval (seconds)
+pim_jp_interval: 60
+
+# DR priority
+pim_dr_priority: 1
+
+# ============================================================================
+# PIM SPT SWITCHOVER
+# ============================================================================
+
+# SPT switchover threshold (kbps, 0 = immediate)
+pim_spt_threshold: 0
+
+# ============================================================================
+# IGMP CONFIGURATION
+# ============================================================================
+
+# Enable IGMP on PIM interfaces
+pim_igmp_enabled: true
+
+# IGMP version
+pim_igmp_version: 3
+
+# IGMP query interval
+pim_igmp_query_interval: 125
+
+# ============================================================================
+# DEFAULTS
+# ============================================================================
+
+# Default PIM mode
+pim_default_mode: "sparse"
+
+# Default admin state for interfaces
+pim_default_interface_state: "enable"
+

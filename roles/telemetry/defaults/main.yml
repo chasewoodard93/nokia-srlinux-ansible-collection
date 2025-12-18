@@ -1,0 +1,130 @@
+---
+# defaults/main.yml - Default variables for telemetry role
+
+# ============================================================================
+# gNMI SERVER CONFIGURATION
+# ============================================================================
+
+# Enable gNMI server
+gnmi_enabled: true
+
+# gNMI network instance
+gnmi_network_instance: "mgmt"
+
+# gNMI port (default 57400)
+gnmi_port: 57400
+
+# gNMI admin state
+gnmi_admin_state: "enable"
+
+# TLS configuration for gNMI
+gnmi_tls_enabled: true
+
+# TLS profile for gNMI (must be pre-configured)
+# gnmi_tls_profile: "gnmi-tls"
+
+# ============================================================================
+# gRPC SERVER CONFIGURATION
+# ============================================================================
+
+# Enable gRPC server
+grpc_enabled: true
+
+# gRPC port
+grpc_port: 57400
+
+# gRPC admin state  
+grpc_admin_state: "enable"
+
+# ============================================================================
+# STREAMING TELEMETRY SUBSCRIPTIONS
+# ============================================================================
+
+# Telemetry subscriptions
+# telemetry_subscriptions:
+#   - name: "interfaces"
+#     paths:
+#       - "/interface/statistics"
+#       - "/interface/oper-state"
+#     mode: "sample"           # sample, on-change, target-defined
+#     sample_interval: 10000   # milliseconds (10 seconds)
+#   - name: "bgp"
+#     paths:
+#       - "/network-instance/protocols/bgp/neighbor/session-state"
+#       - "/network-instance/protocols/bgp/neighbor/statistics"
+#     mode: "on-change"
+#   - name: "system"
+#     paths:
+#       - "/platform/control/cpu"
+#       - "/platform/control/memory"
+#     mode: "sample"
+#     sample_interval: 30000   # 30 seconds
+
+telemetry_subscriptions: []
+
+# ============================================================================
+# TELEMETRY DESTINATIONS (COLLECTORS)
+# ============================================================================
+
+# Telemetry collectors/destinations
+# telemetry_destinations:
+#   - name: "collector1"
+#     address: "192.168.1.100"
+#     port: 57500
+#     protocol: "grpc"
+#     encoding: "proto"       # proto, json, json_ietf
+#     tls: false
+
+telemetry_destinations: []
+
+# ============================================================================
+# JSON-RPC CONFIGURATION
+# ============================================================================
+
+# Enable JSON-RPC interface
+json_rpc_enabled: true
+
+# JSON-RPC network instance
+json_rpc_network_instance: "mgmt"
+
+# JSON-RPC HTTP settings
+json_rpc_http_enabled: false
+json_rpc_http_port: 80
+
+# JSON-RPC HTTPS settings
+json_rpc_https_enabled: true
+json_rpc_https_port: 443
+
+# ============================================================================
+# ALLOWED NETWORKS
+# ============================================================================
+
+# Networks allowed to access management APIs
+# telemetry_allowed_networks:
+#   - "10.0.0.0/8"
+#   - "172.16.0.0/12"
+#   - "192.168.0.0/16"
+
+telemetry_allowed_networks: []
+
+# ============================================================================
+# COMMON TELEMETRY PATHS
+# ============================================================================
+
+# Pre-defined path sets for common use cases
+telemetry_path_sets:
+  interfaces:
+    - "/interface/statistics"
+    - "/interface/oper-state"
+    - "/interface/ethernet/statistics"
+  bgp:
+    - "/network-instance/protocols/bgp/neighbor"
+    - "/network-instance/protocols/bgp/rib"
+  system:
+    - "/platform/control"
+    - "/platform/linecard"
+    - "/system/information"
+  evpn:
+    - "/network-instance/protocols/bgp/evpn"
+    - "/tunnel-interface/vxlan-interface"
+

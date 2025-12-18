@@ -1,0 +1,60 @@
+{# DHCP Relay configuration template for SR Linux #}
+
+{% for relay in dhcp_relay_instances %}
+{# ============================================================================ #}
+{# DHCP Relay: {{ relay.network_instance }}                                    #}
+{# ============================================================================ #}
+
+{# Enable DHCP relay on network instance #}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay admin-state {{ relay.admin_state | default('enable') }}
+
+{# Configure DHCP servers #}
+{% for server in relay.servers %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay server {{ server.address }}
+{% endfor %}
+
+{# Configure relay interfaces #}
+{% for intf in relay.interfaces | default([]) %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay interface {{ intf }} admin-state enable
+{% endfor %}
+
+{# Option 82 Configuration #}
+{% if relay.options is defined and relay.options.option82 | default(dhcp_option82_enabled) %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay option admin-state enable
+{% if relay.options.option82_circuit_id is defined %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay option circuit-id "{{ relay.options.option82_circuit_id }}"
+{% endif %}
+{% if relay.options.option82_remote_id is defined %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay option remote-id "{{ relay.options.option82_remote_id }}"
+{% endif %}
+{% endif %}
+
+{# Source address for relay #}
+{% if relay.options is defined and relay.options.source_address is defined %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay source-address {{ relay.options.source_address }}
+{% endif %}
+
+{# Use GI address #}
+{% if relay.options is defined and relay.options.use_gi_address | default(true) %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay use-gi-addr-as-src-ip-addr true
+{% endif %}
+
+{% endfor %}
+
+{# ============================================================================ #}
+{# DHCPv6 Relay Configuration                                                  #}
+{# ============================================================================ #}
+{% for relay in dhcpv6_relay_instances %}
+
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay6 admin-state {{ relay.admin_state | default('enable') }}
+
+{% for server in relay.servers %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay6 server {{ server.address }}
+{% endfor %}
+
+{% for intf in relay.interfaces | default([]) %}
+set / network-instance {{ relay.network_instance }} protocols dhcp-relay6 interface {{ intf }} admin-state enable
+{% endfor %}
+
+{% endfor %}
+

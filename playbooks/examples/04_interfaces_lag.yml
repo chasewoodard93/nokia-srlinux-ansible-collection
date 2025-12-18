@@ -1,0 +1,71 @@
+---
+# 04_interfaces_lag.yml - Interface and LAG Configuration
+#
+# Usage:
+#   ansible-playbook 04_interfaces_lag.yml -i inventory/hosts.yml
+
+- name: "Interface and LAG Configuration"
+  hosts: leaf
+  gather_facts: false
+  
+  vars:
+    # ─────────────────────────────────────────────────────────
+    # Physical Interface Configuration
+    # ─────────────────────────────────────────────────────────
+    interfaces_physical:
+      - name: "ethernet-1/10"
+        admin_state: "enable"
+        description: "Server Port 1"
+        mtu: 9214
+      - name: "ethernet-1/11"
+        admin_state: "enable"
+        description: "Server Port 2"
+        mtu: 9214
+
+    # ─────────────────────────────────────────────────────────
+    # Subinterface Configuration
+    # ─────────────────────────────────────────────────────────
+    interfaces_subinterfaces:
+      - interface: "ethernet-1/20"
+        index: 0
+        type: "routed"
+        ipv4_address: "192.168.100.1/24"
+        description: "Management VLAN"
+
+    # ─────────────────────────────────────────────────────────
+    # LAG Configuration
+    # ─────────────────────────────────────────────────────────
+    lag_interfaces:
+      - name: "lag1"
+        description: "LAG to Server 1"
+        admin_state: "enable"
+        lacp_mode: "active"
+        lacp_interval: "fast"
+        min_links: 1
+        members:
+          - "ethernet-1/10"
+          - "ethernet-1/11"
+        subinterfaces:
+          - index: 100
+            type: "bridged"
+            vlan_id: 100
+
+  tasks:
+    - name: "Configure Physical Interfaces"
+      import_role:
+        name: chasewoodard93.srlinux.interfaces
+
+    - name: "Configure LAG Interfaces"
+      import_role:
+        name: chasewoodard93.srlinux.lag
+
+    - name: "Interface Configuration Complete"
+      debug:
+        msg: |
+          ✅ Interface Configuration Complete
+          ────────────────────────────────────
+          Device: {{ inventory_hostname }}
+          Physical Interfaces: {{ interfaces_physical | length }}
+          Subinterfaces: {{ interfaces_subinterfaces | length }}
+          LAG Interfaces: {{ lag_interfaces | length }}
+

@@ -1,0 +1,86 @@
+---
+# defaults/main.yml - Default variables for lldp role
+
+# ============================================================================
+# LLDP GLOBAL CONFIGURATION
+# ============================================================================
+
+# Enable LLDP globally
+lldp_enabled: true
+
+# LLDP admin state
+lldp_admin_state: "enable"
+
+# LLDP message transmit interval (seconds)
+lldp_message_tx_interval: 30
+
+# LLDP message transmit hold multiplier
+lldp_message_tx_hold_multiplier: 4
+
+# LLDP reinit delay (seconds)
+lldp_reinit_delay: 2
+
+# LLDP tx delay (seconds) - minimum delay between successive LLDP frames
+lldp_tx_delay: 2
+
+# ============================================================================
+# LLDP INTERFACE CONFIGURATION
+# ============================================================================
+
+# LLDP per-interface settings
+# lldp_interfaces:
+#   - name: "ethernet-1/1"
+#     admin_state: "enable"
+#     mode: "tx-rx"          # tx-only, rx-only, tx-rx
+#   - name: "ethernet-1/2"
+#     admin_state: "enable"
+#     mode: "tx-rx"
+#   - name: "ethernet-1/49"
+#     admin_state: "disable"  # Disable on uplinks to external networks
+
+lldp_interfaces: []
+
+# ============================================================================
+# LLDP TLV CONFIGURATION (Optional Extensions)
+# ============================================================================
+
+# System name to advertise (default: hostname)
+# lldp_system_name: "leaf1.dc1.example.com"
+
+# System description to advertise
+# lldp_system_description: "Nokia SR Linux - Leaf Switch"
+
+# Port description source
+lldp_port_description_type: "interface-description"  # interface-description or interface-alias
+
+# ============================================================================
+# LLDP MANAGEMENT ADDRESS
+# ============================================================================
+
+# Advertise management address
+lldp_management_address_enabled: true
+
+# Management address to advertise (auto-derived from mgmt interface if not specified)
+# lldp_management_address: "192.168.1.1"
+
+# ============================================================================
+# LLDP DISABLE ON SPECIFIC INTERFACES
+# ============================================================================
+
+# List of interfaces to disable LLDP (e.g., external-facing interfaces)
+# lldp_disabled_interfaces:
+#   - "ethernet-1/49"
+#   - "ethernet-1/50"
+
+lldp_disabled_interfaces: []
+
+# ============================================================================
+# DEFAULT VALUES
+# ============================================================================
+
+# Default LLDP mode for interfaces
+lldp_default_mode: "tx-rx"
+
+# Default admin state for LLDP on interfaces
+lldp_default_interface_admin_state: "enable"
+

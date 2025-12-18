@@ -1,0 +1,48 @@
+{# Mirroring/SPAN configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# Mirroring Destinations                                                      #}
+{# ============================================================================ #}
+{% for dest in mirroring_destinations %}
+
+set / system mirroring mirroring-instance {{ dest.name }} admin-state {{ dest.admin_state | default(mirroring_default_admin_state) }}
+
+{% if dest.type | default('local') == 'local' %}
+{# Local SPAN destination #}
+set / system mirroring mirroring-instance {{ dest.name }} mirror-destination local {{ dest.destination_interface }}
+{% else %}
+{# Remote SPAN / ERSPAN destination #}
+set / system mirroring mirroring-instance {{ dest.name }} mirror-destination remote
+set / system mirroring mirroring-instance {{ dest.name }} mirror-destination remote tunnel-end-point destination-address {{ dest.destination_address }}
+{% if dest.source_address is defined %}
+set / system mirroring mirroring-instance {{ dest.name }} mirror-destination remote tunnel-end-point source-address {{ dest.source_address }}
+{% endif %}
+{% if dest.network_instance is defined %}
+set / system mirroring mirroring-instance {{ dest.name }} mirror-destination remote network-instance {{ dest.network_instance }}
+{% endif %}
+{% endif %}
+
+{% endfor %}
+
+{# ============================================================================ #}
+{# Mirroring Sources - Interface Based                                        #}
+{# ============================================================================ #}
+{% for source in mirroring_sources %}
+
+{% for intf in source.interfaces | default([]) %}
+set / system mirroring mirroring-instance {{ source.destination }} mirror-source interface {{ intf.name }} direction {{ intf.direction | default(mirroring_default_direction) }}
+{% endfor %}
+
+{% for subintf in source.subinterfaces | default([]) %}
+set / system mirroring mirroring-instance {{ source.destination }} mirror-source subinterface {{ subintf.name }} direction {{ subintf.direction | default(mirroring_default_direction) }}
+{% endfor %}
+
+{% endfor %}
+
+{# ============================================================================ #}
+{# ACL-Based Mirroring                                                         #}
+{# ============================================================================ #}
+{% for acl_mirror in acl_mirroring %}
+set / system mirroring mirroring-instance {{ acl_mirror.destination }} mirror-source acl {{ acl_mirror.acl_name }} direction {{ acl_mirror.direction | default('ingress') }}
+{% endfor %}
+

@@ -1,0 +1,92 @@
+---
+# defaults/main.yml - Default variables for ospf role
+
+# ============================================================================
+# OSPF INSTANCE CONFIGURATION
+# ============================================================================
+
+# OSPF instances to configure
+# ospf_instances:
+#   - network_instance: "default"
+#     instance_id: 0
+#     router_id: "10.0.0.1"
+#     admin_state: "enable"
+#     version: "ospf-v2"  # ospf-v2 or ospf-v3
+#     reference_bandwidth: 100000  # Mbps for cost calculation
+#     areas:
+#       - area_id: "0.0.0.0"
+#         type: "normal"  # normal, stub, nssa
+#         interfaces:
+#           - name: "ethernet-1/1.0"
+#             passive: false
+#             interface_type: "point-to-point"  # point-to-point, broadcast
+#             metric: 10
+#             priority: 1
+#             hello_interval: 10
+#             dead_interval: 40
+#           - name: "system0.0"
+#             passive: true
+#       - area_id: "0.0.0.1"
+#         type: "stub"
+#         default_metric: 10
+
+ospf_instances: []
+
+# ============================================================================
+# OSPF TIMERS
+# ============================================================================
+
+# Default hello interval (seconds)
+ospf_default_hello_interval: 10
+
+# Default dead interval (seconds)
+ospf_default_dead_interval: 40
+
+# SPF calculation delay (milliseconds)
+ospf_spf_initial_delay: 1000
+ospf_spf_second_delay: 1000
+ospf_spf_max_delay: 10000
+
+# ============================================================================
+# OSPF AUTHENTICATION
+# ============================================================================
+
+# Enable OSPF authentication
+# ospf_authentication:
+#   - network_instance: "default"
+#     area_id: "0.0.0.0"
+#     interface: "ethernet-1/1.0"
+#     auth_type: "md5"  # none, simple, md5
+#     key_id: 1
+#     key: "ospf_secret"
+
+ospf_authentication: []
+
+# ============================================================================
+# OSPF REDISTRIBUTION
+# ============================================================================
+
+# Routes to redistribute into OSPF
+# ospf_redistribution:
+#   - network_instance: "default"
+#     protocol: "static"  # static, bgp, direct
+#     policy: "REDISTRIBUTE-INTO-OSPF"  # optional route-policy
+
+ospf_redistribution: []
+
+# ============================================================================
+# OSPF DEFAULTS
+# ============================================================================
+
+# Default reference bandwidth (Mbps)
+ospf_default_reference_bandwidth: 100000
+
+# Default interface type
+ospf_default_interface_type: "point-to-point"
+
+# Export policy for OSPF
+ospf_export_policy: ""
+
+# Import policy for OSPF
+ospf_import_policy: ""
+

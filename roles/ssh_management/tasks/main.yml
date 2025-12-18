@@ -1,0 +1,70 @@
+---
+# tasks/main.yml - Main tasks for ssh_management role
+
+- name: "Display SSH management configuration info"
+  debug:
+    msg: "Configuring SSH server on {{ inventory_hostname }}"
+
+# Generate SSH configuration
+- name: "Generate SSH configuration"
+  template:
+    src: ssh.j2
+    dest: "/tmp/{{ inventory_hostname }}_ssh.cfg"
+  delegate_to: localhost
+
+- name: "Read SSH configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_ssh.cfg"
+  register: ssh_config_raw
+  delegate_to: localhost
+
+- name: "Parse SSH commands"
+  set_fact:
+    ssh_commands: "{{ (ssh_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+
+# Apply SSH configuration
+- name: "Apply SSH configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ ssh_commands }}"
+  register: ssh_result
+  when: ssh_commands | length > 0
+
+# Verify SSH configuration
+- name: "Verify SSH server status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system ssh-server"
+  register: ssh_status
+
+- name: "Display SSH server status"
+  debug:
+    msg: "{{ ssh_status.stdout_lines[0] | default('No output') }}"
+
+- name: "Display SSH configuration summary"
+  debug:
+    msg: |
+      ✅ SSH Configuration Complete
+      ─────────────────────────────
+      Device: {{ inventory_hostname }}
+      SSH Server: {{ ssh_enabled | default(true) | ternary('Enabled', 'Disabled') }}
+      Network Instance: {{ ssh_network_instance | default('mgmt') }}
+      Max Sessions: {{ ssh_max_sessions | default('default') }}
+      Idle Timeout: {{ ssh_idle_timeout | default('default') }}s
+      Password Auth: {{ ssh_password_auth | default(true) }}
+      PubKey Auth: {{ ssh_pubkey_auth | default(true) }}
+      Allowed Networks: {{ ssh_allowed_networks | length }}
+      Authorized Keys: {{ ssh_authorized_keys | length }} users
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_ssh.cfg"
+    state: absent
+  delegate_to: localhost
+

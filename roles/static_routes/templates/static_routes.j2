@@ -1,0 +1,36 @@
+{# Template for static route configuration #}
+{# IPv4 static routes #}
+{% for instance in static_routes %}
+{% for route in instance.routes %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} admin-state enable
+{% if route.next_hop == 'discard' %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} next-hop-group discard
+{% else %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} next-hop-group {{ route.prefix | replace('/', '_') | replace('.', '_') }}_nhg
+set / network-instance {{ instance.network_instance }} next-hop-groups group {{ route.prefix | replace('/', '_') | replace('.', '_') }}_nhg nexthop 1 ip-address {{ route.next_hop }}
+{% endif %}
+{% if route.preference is defined %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} preference {{ route.preference }}
+{% endif %}
+{% if route.metric is defined %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} metric {{ route.metric }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+{# IPv6 static routes #}
+{% for instance in static_routes_ipv6 %}
+{% for route in instance.routes %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} admin-state enable
+{% if route.next_hop == 'discard' %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} next-hop-group discard
+{% else %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} next-hop-group {{ route.prefix | replace('/', '_') | replace(':', '_') }}_nhg
+set / network-instance {{ instance.network_instance }} next-hop-groups group {{ route.prefix | replace('/', '_') | replace(':', '_') }}_nhg nexthop 1 ip-address {{ route.next_hop }}
+{% endif %}
+{% if route.preference is defined %}
+set / network-instance {{ instance.network_instance }} static-routes route {{ route.prefix }} preference {{ route.preference }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+

@@ -1,0 +1,74 @@
+---
+# tasks/main.yml - Main tasks for software_upgrade role
+
+- name: "Display software upgrade information"
+  debug:
+    msg: "Software upgrade check on {{ inventory_hostname }}"
+
+# Get current software version
+- name: "Get current software version"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show version"
+  register: current_version
+
+- name: "Display current version"
+  debug:
+    msg: "Current software version info retrieved"
+
+# Check if upgrade is needed
+- name: "Check if upgrade is needed"
+  set_fact:
+    _upgrade_needed: "{{ software_target_version | length > 0 }}"
+
+- name: "Skip upgrade if no target version specified"
+  debug:
+    msg: "No target version specified, skipping upgrade"
+  when: not _upgrade_needed
+
+# Pre-upgrade tasks
+- name: "Include pre-upgrade checks"
+  include_tasks: pre_checks.yml
+  when: 
+    - _upgrade_needed
+    - software_pre_check_enabled
+
+# Backup configuration before upgrade
+- name: "Create pre-upgrade configuration backup"
+  chasewoodard93.srlinux.srlinux_backup:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    dest: "{{ software_log_path | default('/tmp') }}/{{ inventory_hostname }}_pre_upgrade_{{ ansible_date_time.iso8601_basic_short }}.json"
+    format: "json"
+  register: pre_upgrade_backup
+  when:
+    - _upgrade_needed
+    - software_backup_before_upgrade
+
+- name: "Display backup result"
+  debug:
+    msg: "Pre-upgrade backup saved to {{ pre_upgrade_backup.dest | default('N/A') }}"
+  when:
+    - _upgrade_needed
+    - software_backup_before_upgrade
+
+# Show upgrade summary
+- name: "Software upgrade summary"
+  debug:
+    msg: |
+      📋 Software Upgrade Summary
+      ───────────────────────────
+      Device: {{ inventory_hostname }}
+      Target Version: {{ software_target_version | default('Not specified') }}
+      Upgrade Needed: {{ _upgrade_needed }}
+      Pre-checks: {{ software_pre_check_enabled }}
+      Auto-reboot: {{ software_auto_reboot }}
+      Backup Before: {{ software_backup_before_upgrade }}
+      
+      ⚠️  Note: Actual image installation requires manual approval.
+      Run with 'software_execute_upgrade: true' to proceed.
+

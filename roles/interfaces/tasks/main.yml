@@ -1,0 +1,47 @@
+---
+# tasks/main.yml - Main tasks for interfaces role
+
+- name: "Display interface configuration information"
+  debug:
+    msg: "Configuring interfaces on {{ inventory_hostname }}"
+
+# Generate and apply interface configuration
+- name: "Generate interface configuration"
+  set_fact:
+    _interface_config: "{{ lookup('template', 'interfaces.j2') }}"
+  when: interfaces_physical | length > 0 or interfaces_subinterfaces | length > 0
+
+- name: "Apply interface configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _interface_config.split('\n') | select('match', '^set ') | list }}"
+  register: interface_config_result
+  when: interfaces_physical | length > 0 or interfaces_subinterfaces | length > 0
+
+- name: "Display interface configuration result"
+  debug:
+    msg: "Configured {{ interfaces_physical | length }} physical interfaces and {{ interfaces_subinterfaces | length }} subinterfaces"
+  when: interfaces_physical | length > 0 or interfaces_subinterfaces | length > 0
+
+# Verify interface configuration
+- name: "Verify interface configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show interface brief"
+  register: interface_verify
+
+- name: "Interface configuration complete"
+  debug:
+    msg: |
+      ✅ Interface Configuration Complete
+      ───────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Physical Interfaces: {{ interfaces_physical | length }}
+      Subinterfaces: {{ interfaces_subinterfaces | length }}
+      Network Instance Bindings: {{ interfaces_network_instance_bindings | length }}
+

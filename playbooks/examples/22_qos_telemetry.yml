@@ -1,0 +1,135 @@
+---
+# Example Playbook: QoS and Telemetry Configuration
+# Configures Quality of Service and streaming telemetry
+#
+# Usage:
+#   ansible-playbook 22_qos_telemetry.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - Traffic classification and marking
+#   - Queue scheduling and policing
+#   - gNMI/gRPC telemetry configuration
+#   - Streaming subscriptions
+
+- name: Configure QoS and Telemetry
+  hosts: srlinux
+  gather_facts: false
+  vars:
+    # QoS configuration
+    qos_config:
+      classifiers:
+        - name: dscp-classifier
+          type: dscp
+          entries:
+            - match: 46    # EF
+              forwarding_class: expedited
+            - match: 34    # AF41
+              forwarding_class: assured
+            - match: 0     # BE
+              forwarding_class: best-effort
+              
+      schedulers:
+        - name: egress-scheduler
+          queues:
+            - queue: 0
+              weight: 1
+              type: wrr
+              forwarding_class: best-effort
+            - queue: 5
+              weight: 10
+              type: wrr
+              forwarding_class: assured
+            - queue: 7
+              type: strict-priority
+              forwarding_class: expedited
+              
+      policies:
+        - name: ingress-policy
+          interfaces:
+            - ethernet-1/1
+            - ethernet-1/2
+          classifier: dscp-classifier
+          policer:
+            cir: 1000000000  # 1Gbps
+            pir: 2000000000  # 2Gbps
+            
+    # Telemetry configuration
+    telemetry_config:
+      grpc:
+        admin_state: enable
+        port: 57400
+        use_authentication: true
+        tls_profile: default
+        
+      gnmi:
+        admin_state: enable
+        commit_confirmed_timeout: 600
+        
+      json_rpc:
+        admin_state: enable
+        port: 443
+        
+      subscriptions:
+        - name: interface-stats
+          mode: stream
+          interval: 10000  # 10 seconds
+          paths:
+            - /interface[name=*]/statistics
+            - /interface[name=*]/oper-state
+            
+        - name: bgp-neighbors
+          mode: stream
+          interval: 30000  # 30 seconds
+          paths:
+            - /network-instance[name=*]/protocols/bgp/neighbor[peer-address=*]/session-state
+
+  tasks:
+    - name: Display QoS configuration
+      ansible.builtin.debug:
+        msg: |
+          QoS Configuration:
+          - Classifiers: {{ qos_config.classifiers | length }}
+          - Schedulers: {{ qos_config.schedulers | length }}
+          - Policies: {{ qos_config.policies | length }}
+
+    - name: Apply QoS configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.qos
+      vars:
+        qos_enabled: true
+        qos_classifiers: "{{ qos_config.classifiers }}"
+        qos_schedulers: "{{ qos_config.schedulers }}"
+        qos_policies: "{{ qos_config.policies }}"
+
+    - name: Display Telemetry configuration
+      ansible.builtin.debug:
+        msg: |
+          Telemetry Configuration:
+          - gRPC Port: {{ telemetry_config.grpc.port }}
+          - gNMI: {{ telemetry_config.gnmi.admin_state }}
+          - JSON-RPC: {{ telemetry_config.json_rpc.admin_state }}
+          - Subscriptions: {{ telemetry_config.subscriptions | length }}
+
+    - name: Apply Telemetry configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.telemetry
+      vars:
+        telemetry_enabled: true
+        telemetry_grpc: "{{ telemetry_config.grpc }}"
+        telemetry_gnmi: "{{ telemetry_config.gnmi }}"
+        telemetry_json_rpc: "{{ telemetry_config.json_rpc }}"
+
+    - name: Verify configurations
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - info from running /system grpc-server
+          - info from running /system gnmi-server
+      register: config_status
+
+    - name: Display status
+      ansible.builtin.debug:
+        var: config_status.stdout_lines
+

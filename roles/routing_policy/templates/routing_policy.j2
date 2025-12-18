@@ -1,0 +1,55 @@
+{# Template for routing policy configuration #}
+
+{# Prefix lists #}
+{% for plist in routing_policy_prefix_lists %}
+{% for prefix in plist.prefixes %}
+{% if prefix.mask_range == 'exact' %}
+set / routing-policy prefix-set {{ plist.name }} prefix {{ prefix.prefix }} mask-length-range exact
+{% else %}
+set / routing-policy prefix-set {{ plist.name }} prefix {{ prefix.prefix }} mask-length-range {{ prefix.mask_range }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+{# Community lists #}
+{% for clist in routing_policy_community_lists %}
+{% for member in clist.members %}
+set / routing-policy community-set {{ clist.name }} member {{ member }}
+{% endfor %}
+{% endfor %}
+
+{# AS path lists #}
+{% for aspath in routing_policy_as_path_lists %}
+set / routing-policy as-path-set {{ aspath.name }} expression "{{ aspath.expression }}"
+{% endfor %}
+
+{# Route policies #}
+{% for policy in routing_policy_policies %}
+{% for stmt in policy.statements %}
+set / routing-policy policy {{ policy.name }} statement {{ stmt.sequence }} action policy-result {{ stmt.action }}
+{% if stmt.match is defined %}
+{% if stmt.match.prefix_list is defined %}
+set / routing-policy policy {{ policy.name }} statement {{ stmt.sequence }} match prefix-set {{ stmt.match.prefix_list }}
+{% endif %}
+{% if stmt.match.community_list is defined %}
+set / routing-policy policy {{ policy.name }} statement {{ stmt.sequence }} match community-set {{ stmt.match.community_list }}
+{% endif %}
+{% if stmt.match.as_path_list is defined %}
+set / routing-policy policy {{ policy.name }} statement {{ stmt.sequence }} match as-path-set {{ stmt.match.as_path_list }}
+{% endif %}
+{% endif %}
+{% if stmt.set is defined %}
+{% if stmt.set.local_preference is defined %}
+set / routing-policy policy {{ policy.name }} statement {{ stmt.sequence }} action bgp local-preference set {{ stmt.set.local_preference }}
+{% endif %}
+{% if stmt.set.med is defined %}
+set / routing-policy policy {{ policy.name }} statement {{ stmt.sequence }} action bgp med set {{ stmt.set.med }}
+{% endif %}
+{% if stmt.set.community is defined and stmt.set.community_list is defined %}
+set / routing-policy policy {{ policy.name }} statement {{ stmt.sequence }} action bgp communities {{ stmt.set.community }} {{ stmt.set.community_list }}
+{% endif %}
+{% endif %}
+{% endfor %}
+set / routing-policy policy {{ policy.name }} default-action policy-result {{ routing_policy_default_action }}
+{% endfor %}
+

@@ -1,0 +1,40 @@
+{# LLDP configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# LLDP Global Configuration                                                   #}
+{# ============================================================================ #}
+{% if lldp_enabled | default(true) %}
+set / system lldp admin-state {{ lldp_admin_state | default('enable') }}
+set / system lldp message-tx-interval {{ lldp_message_tx_interval | default(30) }}
+set / system lldp message-tx-hold-multiplier {{ lldp_message_tx_hold_multiplier | default(4) }}
+set / system lldp reinit-delay {{ lldp_reinit_delay | default(2) }}
+set / system lldp tx-delay {{ lldp_tx_delay | default(2) }}
+{% endif %}
+
+{# ============================================================================ #}
+{# LLDP System Information                                                     #}
+{# ============================================================================ #}
+{% if lldp_system_name is defined %}
+set / system lldp system-name "{{ lldp_system_name }}"
+{% endif %}
+{% if lldp_system_description is defined %}
+set / system lldp system-description "{{ lldp_system_description }}"
+{% endif %}
+
+{# ============================================================================ #}
+{# LLDP Interface Configuration                                                #}
+{# ============================================================================ #}
+{% for intf in lldp_interfaces %}
+set / system lldp interface {{ intf.name }} admin-state {{ intf.admin_state | default(lldp_default_interface_admin_state) }}
+{% if intf.mode is defined %}
+{# Note: SR Linux may use different syntax for LLDP mode #}
+{% endif %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# LLDP Disabled Interfaces                                                    #}
+{# ============================================================================ #}
+{% for intf in lldp_disabled_interfaces %}
+set / system lldp interface {{ intf }} admin-state disable
+{% endfor %}
+

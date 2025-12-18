@@ -1,0 +1,51 @@
+{# Telemetry configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# gNMI/gRPC Server Configuration                                              #}
+{# ============================================================================ #}
+{% if gnmi_enabled | default(true) %}
+set / system gnmi-server admin-state {{ gnmi_admin_state | default('enable') }}
+set / system gnmi-server network-instance {{ gnmi_network_instance | default('mgmt') }}
+set / system gnmi-server rate-limit 60
+set / system gnmi-server trace-options [ request response common ]
+{% if gnmi_port is defined %}
+set / system gnmi-server unix-socket admin-state enable
+{% endif %}
+{% endif %}
+
+{# ============================================================================ #}
+{# gRPC Server Configuration                                                   #}
+{# ============================================================================ #}
+{% if grpc_enabled | default(true) %}
+set / system grpc-server admin-state {{ grpc_admin_state | default('enable') }}
+set / system grpc-server network-instance {{ gnmi_network_instance | default('mgmt') }}
+set / system grpc-server port {{ grpc_port | default(57400) }}
+{% if gnmi_tls_enabled | default(true) %}
+set / system grpc-server tls-profile {{ gnmi_tls_profile | default('clab-profile') }}
+{% endif %}
+{% endif %}
+
+{# ============================================================================ #}
+{# JSON-RPC Server Configuration                                               #}
+{# ============================================================================ #}
+{% if json_rpc_enabled | default(true) %}
+set / system json-rpc-server admin-state enable
+set / system json-rpc-server network-instance {{ json_rpc_network_instance | default('mgmt') }}
+{% if json_rpc_https_enabled | default(true) %}
+set / system json-rpc-server https admin-state enable
+set / system json-rpc-server https port {{ json_rpc_https_port | default(443) }}
+{% endif %}
+{% if json_rpc_http_enabled | default(false) %}
+set / system json-rpc-server http admin-state enable
+set / system json-rpc-server http port {{ json_rpc_http_port | default(80) }}
+{% endif %}
+{% endif %}
+
+{# ============================================================================ #}
+{# Telemetry Allowed Networks (ACL for management access)                      #}
+{# ============================================================================ #}
+{% for network in telemetry_allowed_networks %}
+set / system gnmi-server access network {{ network }}
+set / system grpc-server access network {{ network }}
+{% endfor %}
+

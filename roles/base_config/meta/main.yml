@@ -1,0 +1,33 @@
+---
+# meta/main.yml - Role metadata and dependencies
+
+galaxy_info:
+  author: chasewoodard93
+  description: Configure base system settings on Nokia SR Linux devices
+  company: Network Automation
+  
+  license: MIT
+  
+  min_ansible_version: "2.9"
+  
+  platforms:
+    - name: Nokia SR Linux
+      versions:
+        - all
+  
+  galaxy_tags:
+    - networking
+    - srlinux
+    - nokia
+    - datacenter
+    - evpn
+    - vxlan
+
+# Role dependencies
+# This role has no dependencies - it's the foundation
+dependencies: []
+
+# Collections this role depends on
+collections:
+  - chasewoodard93.srlinux
+

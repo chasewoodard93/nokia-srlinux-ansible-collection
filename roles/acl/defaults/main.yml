@@ -1,0 +1,70 @@
+---
+# defaults/main.yml - Default variables for acl role
+
+# ============================================================================
+# IPv4 ACCESS CONTROL LISTS
+# ============================================================================
+
+# IPv4 ACL definitions
+# acl_ipv4_filters:
+#   - name: "MGMT-ACCESS"
+#     description: "Management access ACL"
+#     entries:
+#       - sequence: 10
+#         action: "accept"
+#         description: "Allow SSH from management network"
+#         source_prefix: "192.168.0.0/16"
+#         destination_port: 22
+#         protocol: "tcp"
+#       - sequence: 20
+#         action: "accept"
+#         description: "Allow SNMP from monitoring"
+#         source_prefix: "10.0.0.0/8"
+#         destination_port: 161
+#         protocol: "udp"
+#       - sequence: 1000
+#         action: "drop"
+#         description: "Deny all other"
+
+acl_ipv4_filters: []
+
+# ============================================================================
+# IPv6 ACCESS CONTROL LISTS
+# ============================================================================
+
+# IPv6 ACL definitions (same structure as IPv4)
+acl_ipv6_filters: []
+
+# ============================================================================
+# ACL APPLICATION
+# ============================================================================
+
+# Apply ACLs to interfaces
+# acl_interface_bindings:
+#   - interface: "ethernet-1/1"
+#     subinterface: 0
+#     ipv4_filter_input: "MGMT-ACCESS"
+#     ipv4_filter_output: ""
+#   - interface: "mgmt0"
+#     subinterface: 0
+#     ipv4_filter_input: "MGMT-ACCESS"
+
+acl_interface_bindings: []
+
+# ============================================================================
+# DEFAULT ACTIONS
+# ============================================================================
+
+# Default action for IPv4 ACLs (accept/drop)
+acl_ipv4_default_action: "accept"
+
+# Default action for IPv6 ACLs (accept/drop)
+acl_ipv6_default_action: "accept"
+
+# ============================================================================
+# ACL STATISTICS
+# ============================================================================
+
+# Enable ACL match statistics
+acl_enable_statistics: true
+

@@ -1,0 +1,182 @@
+---
+# tasks/main.yml - Main tasks for bgp_underlay role
+# Uses Jinja2 templates for configuration generation
+
+- name: "Display role information"
+  debug:
+    msg: "Configuring BGP underlay on {{ inventory_hostname }} (AS {{ bgp_asn }})"
+
+# Task 1: Configure BGP instance using template
+# NOTE: Assumes network instance already exists (created by base_config role)
+- name: "Generate BGP instance configuration from template"
+  set_fact:
+    bgp_instance_lines: "{{ lookup('template', 'bgp_instance.j2') }}"
+  tags:
+    - bgp
+    - underlay
+
+- name: "Apply BGP instance configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ bgp_instance_lines.split('\n') | select('match', '^set ') | list }}"
+  register: bgp_instance
+  tags:
+    - bgp
+    - underlay
+
+- name: "Display BGP instance result"
+  debug:
+    msg: "BGP instance configured: AS {{ bgp_asn }}, Router-ID {{ bgp_router_id }}"
+  when: bgp_instance.changed
+
+# Task 2: Configure IPv4 unicast address family using template
+# NOTE: IPv4 unicast is now configured in bgp_instance.j2 to satisfy SR Linux requirement
+#       that at least one address family must be enabled when BGP is enabled
+# This task is kept for backwards compatibility but is skipped by default
+- name: "Generate IPv4 unicast configuration from template"
+  set_fact:
+    bgp_ipv4_lines: "{{ lookup('template', 'bgp_ipv4_unicast.j2') }}"
+  when: false  # Disabled - IPv4 unicast now in bgp_instance.j2
+  tags:
+    - bgp
+    - underlay
+    - ipv4
+
+- name: "Apply IPv4 unicast configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ bgp_ipv4_lines.split('\n') | select('match', '^set ') | list }}"
+  when: false  # Disabled - IPv4 unicast now in bgp_instance.j2
+  register: bgp_ipv4
+  tags:
+    - bgp
+    - underlay
+    - ipv4
+
+# Task 3: Configure BGP peer-groups using template
+# NOTE: Peer-groups must be created before neighbors can reference them
+- name: "Generate BGP peer-group configuration from template"
+  set_fact:
+    bgp_peer_group_lines: "{{ lookup('template', 'bgp_peer_group.j2') }}"
+  tags:
+    - bgp
+    - underlay
+    - peer-group
+
+- name: "Apply BGP peer-group configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ bgp_peer_group_lines.split('\n') | select('match', '^set ') | list }}"
+  register: bgp_peer_group
+  tags:
+    - bgp
+    - underlay
+    - peer-group
+
+- name: "Display BGP peer-group result"
+  debug:
+    msg: "BGP peer-group 'underlay' configured"
+  when: bgp_peer_group.changed
+
+# Task 3b: Configure BGP advanced options (auth, graceful restart, transport)
+- name: "Generate BGP advanced configuration from template"
+  set_fact:
+    bgp_advanced_lines: "{{ lookup('template', 'bgp_advanced.j2') }}"
+  tags:
+    - bgp
+    - underlay
+    - advanced
+
+- name: "Apply BGP advanced configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ bgp_advanced_lines.split('\n') | select('match', '^set ') | list }}"
+  register: bgp_advanced
+  when: bgp_advanced_lines.split('\n') | select('match', '^set ') | list | length > 0
+  tags:
+    - bgp
+    - underlay
+    - advanced
+
+- name: "Display BGP advanced config result"
+  debug:
+    msg: "BGP advanced options configured (GR: {{ bgp_graceful_restart_enabled | default(true) }}, Auth: {{ bgp_authentication_enabled | default(false) }})"
+  when: bgp_advanced.changed | default(false)
+
+# Task 4: Configure BGP neighbors using template
+- name: "Generate BGP neighbor configuration from template"
+  set_fact:
+    bgp_neighbors_lines: "{{ lookup('template', 'bgp_neighbors.j2') }}"
+  when: bgp_neighbors is defined and bgp_neighbors | length > 0
+  tags:
+    - bgp
+    - underlay
+    - neighbors
+
+- name: "Apply BGP neighbor configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ bgp_neighbors_lines.split('\n') | select('match', '^set ') | list }}"
+  when: bgp_neighbors is defined and bgp_neighbors | length > 0
+  register: bgp_neighbor_config
+  tags:
+    - bgp
+    - underlay
+    - neighbors
+
+- name: "Display BGP neighbor summary"
+  debug:
+    msg: "Configured {{ bgp_neighbors | length }} BGP neighbors"
+  when: bgp_neighbors is defined and bgp_neighbors | length > 0
+
+# Task 7: Verify BGP neighbors
+- name: "Verify BGP neighbor status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ network_instance }} protocols bgp neighbor"
+  register: bgp_neighbor_status
+  tags:
+    - bgp
+    - underlay
+    - verify
+
+- name: "Display BGP neighbor status"
+  debug:
+    var: bgp_neighbor_status.stdout_lines[0]
+  when: bgp_neighbor_status is defined
+  tags:
+    - bgp
+    - underlay
+    - verify
+
+# Task 8: Verify BGP routes
+- name: "Verify BGP routes"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ network_instance }} route-table"
+  register: bgp_routes
+  tags:
+    - bgp
+    - underlay
+    - verify
+
+- name: "BGP underlay configuration complete"
+  debug:
+    msg: "✅ BGP underlay configured successfully on {{ inventory_hostname }}"
+

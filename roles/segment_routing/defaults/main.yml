@@ -1,0 +1,135 @@
+---
+# defaults/main.yml - Default variables for segment_routing role
+# Segment Routing (SR-MPLS and SRv6) configuration
+
+# ============================================================================
+# SEGMENT ROUTING GLOBAL CONFIGURATION
+# ============================================================================
+
+# Network instance for segment routing
+sr_network_instance: "default"
+
+# Enable segment routing
+sr_enabled: true
+
+# Segment routing type: sr-mpls, srv6, or both
+sr_type: "sr-mpls"
+
+# ============================================================================
+# SR-MPLS CONFIGURATION
+# ============================================================================
+
+# SRGB (Segment Routing Global Block)
+sr_mpls_srgb_start: 16000
+sr_mpls_srgb_range: 8000
+
+# SRLB (Segment Routing Local Block)
+sr_mpls_srlb_start: 15000
+sr_mpls_srlb_range: 1000
+
+# Node SID (prefix-sid for loopback)
+# sr_mpls_node_sid: 1
+
+# ============================================================================
+# SR-MPLS PREFIX SIDS
+# ============================================================================
+
+# Prefix SIDs
+# sr_mpls_prefix_sids:
+#   - prefix: "10.0.0.1/32"
+#     index: 1
+#     algorithm: 0
+#   - prefix: "10.0.0.2/32"
+#     index: 2
+
+sr_mpls_prefix_sids: []
+
+# ============================================================================
+# SR-MPLS ADJACENCY SIDS
+# ============================================================================
+
+# Static adjacency SIDs
+# sr_mpls_adj_sids:
+#   - interface: "ethernet-1/1.0"
+#     value: 24001
+#     protected: true
+
+sr_mpls_adj_sids: []
+
+# ============================================================================
+# SRv6 CONFIGURATION
+# ============================================================================
+
+# SRv6 locator
+# srv6_locator:
+#   name: "loc1"
+#   prefix: "fc00:0:1::/48"
+#   block_length: 32
+#   node_length: 16
+#   function_length: 16
+#   argument_length: 0
+
+# SRv6 SIDs
+# srv6_sids:
+#   - function: "end"
+#     value: "fc00:0:1::1"
+#   - function: "end-dt4"
+#     value: "fc00:0:1::2"
+#     network_instance: "tenant-1"
+
+srv6_sids: []
+
+# ============================================================================
+# TI-LFA (TOPOLOGY INDEPENDENT LFA)
+# ============================================================================
+
+# Enable TI-LFA
+sr_tilfa_enabled: true
+
+# TI-LFA protection type: link, node, srlg
+sr_tilfa_protection: "node"
+
+# ============================================================================
+# FLEX-ALGO
+# ============================================================================
+
+# Flexible Algorithm definitions
+# sr_flex_algo:
+#   - id: 128
+#     metric_type: "delay"
+#     priority: 100
+#   - id: 129
+#     metric_type: "te-metric"
+#     priority: 100
+
+sr_flex_algo: []
+
+# ============================================================================
+# SR POLICIES
+# ============================================================================
+
+# SR-TE policies
+# sr_policies:
+#   - name: "to-pe2"
+#     color: 100
+#     endpoint: "10.0.0.2"
+#     binding_sid: 24100
+#     segment_lists:
+#       - name: "primary"
+#         weight: 1
+#         segments:
+#           - type: "node-sid"
+#             value: 16002
+
+sr_policies: []
+
+# ============================================================================
+# DEFAULTS
+# ============================================================================
+
+# Default algorithm
+sr_default_algorithm: 0
+
+# Enable ECMP for SR
+sr_ecmp_enabled: true
+

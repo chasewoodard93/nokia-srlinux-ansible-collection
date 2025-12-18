@@ -1,0 +1,106 @@
+---
+# Example Playbook: PIM Multicast Configuration
+# Configures Protocol Independent Multicast for multicast routing
+#
+# Usage:
+#   ansible-playbook 17_pim_multicast.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - PIM Sparse Mode configuration
+#   - Static RP and BSR configuration
+#   - SSM (Source-Specific Multicast) ranges
+#   - IGMP interface configuration
+
+- name: Configure PIM Multicast
+  hosts: srlinux
+  gather_facts: false
+  vars:
+    # PIM global configuration
+    pim_config:
+      admin_state: enable
+      # Static RP configuration
+      static_rp:
+        - address: 10.255.255.1
+          groups:
+            - 239.0.0.0/8
+      # Bootstrap Router (BSR) configuration
+      bsr:
+        admin_state: disable
+        candidate_bsr:
+          address: 10.255.255.1
+          priority: 100
+        candidate_rp:
+          address: 10.255.255.1
+          groups:
+            - 239.0.0.0/8
+      # SSM ranges
+      ssm:
+        admin_state: enable
+        ranges:
+          - 232.0.0.0/8
+          
+    # PIM interfaces
+    pim_interfaces:
+      - name: ethernet-1/1.0
+        admin_state: enable
+        mode: sparse
+        hello_interval: 30
+        dr_priority: 100
+        bfd: true
+        
+      - name: ethernet-1/2.0
+        admin_state: enable
+        mode: sparse
+        hello_interval: 30
+        dr_priority: 50
+        
+      - name: system0.0
+        admin_state: enable
+        mode: sparse
+        
+    # IGMP configuration per interface
+    igmp_interfaces:
+      - name: ethernet-1/10.0
+        admin_state: enable
+        version: 3
+        query_interval: 125
+        max_response_time: 10
+        
+      - name: ethernet-1/11.0
+        admin_state: enable
+        version: 2
+
+  tasks:
+    - name: Display PIM configuration
+      ansible.builtin.debug:
+        msg: |
+          PIM Configuration:
+          - Static RPs: {{ pim_config.static_rp | length }}
+          - SSM Enabled: {{ pim_config.ssm.admin_state }}
+          - PIM Interfaces: {{ pim_interfaces | length }}
+          - IGMP Interfaces: {{ igmp_interfaces | length }}
+
+    - name: Apply PIM configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.pim
+      vars:
+        pim_enabled: true
+        pim_global_config: "{{ pim_config }}"
+        pim_interface_list: "{{ pim_interfaces }}"
+        pim_igmp_interfaces: "{{ igmp_interfaces }}"
+
+    - name: Verify PIM configuration
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - show network-instance default protocols pim neighbor
+          - show network-instance default protocols pim rp
+          - show network-instance default protocols pim interface
+      register: pim_status
+
+    - name: Display PIM status
+      ansible.builtin.debug:
+        var: pim_status.stdout_lines
+

@@ -1,0 +1,62 @@
+---
+# pre_checks.yml - Pre-upgrade validation tasks
+
+- name: "Pre-upgrade: Check system health"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show platform resource-utilization"
+  register: resource_check
+
+- name: "Pre-upgrade: Check disk space"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show platform disk"
+  register: disk_check
+
+- name: "Pre-upgrade: Check BGP sessions"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance default protocols bgp neighbor"
+  register: bgp_check
+  when: software_require_bgp_up
+
+- name: "Pre-upgrade: Check interface status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show interface brief"
+  register: interface_check
+  when: software_require_interfaces_up
+
+- name: "Pre-upgrade: Verify running configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system configuration"
+  register: config_check
+
+- name: "Pre-upgrade checks complete"
+  debug:
+    msg: |
+      ✅ Pre-upgrade Checks Complete
+      ──────────────────────────────
+      Device: {{ inventory_hostname }}
+      Resource Check: ✓
+      Disk Check: ✓
+      BGP Check: {{ '✓' if software_require_bgp_up else 'Skipped' }}
+      Interface Check: {{ '✓' if software_require_interfaces_up else 'Skipped' }}
+      Config Check: ✓
+

@@ -1,0 +1,43 @@
+{# VRRP configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# VRRP IPv4 Groups                                                            #}
+{# ============================================================================ #}
+{% for vrrp in vrrp_groups %}
+{# Enable VRRP on the subinterface #}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv4 vrrp vrrp-group {{ vrrp.group_id }} admin-state enable
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv4 vrrp vrrp-group {{ vrrp.group_id }} virtual-address {{ vrrp.virtual_ip }}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv4 vrrp vrrp-group {{ vrrp.group_id }} priority {{ vrrp.priority | default(vrrp_default_priority) }}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv4 vrrp vrrp-group {{ vrrp.group_id }} preempt {{ vrrp.preempt | default(vrrp_default_preempt) | lower }}
+{% if vrrp.preempt_delay is defined and vrrp.preempt_delay > 0 %}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv4 vrrp vrrp-group {{ vrrp.group_id }} preempt-delay {{ vrrp.preempt_delay }}
+{% endif %}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv4 vrrp vrrp-group {{ vrrp.group_id }} accept-mode {{ vrrp.accept_mode | default(vrrp_default_accept_mode) | lower }}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv4 vrrp vrrp-group {{ vrrp.group_id }} advertisement-interval {{ vrrp.advertisement_interval | default(vrrp_default_advertisement_interval) }}
+{% if vrrp.version is defined %}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv4 vrrp vrrp-group {{ vrrp.group_id }} version {{ vrrp.version }}
+{% endif %}
+{% endfor %}
+
+{# ============================================================================ #}
+{# VRRP IPv6 Groups (VRRPv3)                                                   #}
+{# ============================================================================ #}
+{% for vrrp in vrrp_ipv6_groups %}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv6 vrrp vrrp-group {{ vrrp.group_id }} admin-state enable
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv6 vrrp vrrp-group {{ vrrp.group_id }} virtual-address {{ vrrp.virtual_ip }}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv6 vrrp vrrp-group {{ vrrp.group_id }} priority {{ vrrp.priority | default(vrrp_default_priority) }}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv6 vrrp vrrp-group {{ vrrp.group_id }} preempt {{ vrrp.preempt | default(vrrp_default_preempt) | lower }}
+{% if vrrp.preempt_delay is defined and vrrp.preempt_delay > 0 %}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv6 vrrp vrrp-group {{ vrrp.group_id }} preempt-delay {{ vrrp.preempt_delay }}
+{% endif %}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv6 vrrp vrrp-group {{ vrrp.group_id }} accept-mode {{ vrrp.accept_mode | default(vrrp_default_accept_mode) | lower }}
+set / interface {{ vrrp.interface }} subinterface {{ vrrp.subinterface | default(0) }} ipv6 vrrp vrrp-group {{ vrrp.group_id }} advertisement-interval {{ vrrp.advertisement_interval | default(vrrp_default_advertisement_interval) }}
+{% endfor %}
+
+{# ============================================================================ #}
+{# Interface Tracking                                                          #}
+{# ============================================================================ #}
+{% for track in vrrp_interface_tracking %}
+set / interface {{ track.vrrp_interface }} subinterface {{ track.vrrp_subinterface | default(0) }} ipv4 vrrp vrrp-group {{ track.vrrp_group_id }} interface-tracking track-interface {{ track.track_interface }} priority-decrement {{ track.priority_decrement | default(50) }}
+{% endfor %}
+

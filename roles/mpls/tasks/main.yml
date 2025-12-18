@@ -1,0 +1,72 @@
+---
+# tasks/main.yml - Main tasks for mpls role
+
+- name: "Display MPLS configuration info"
+  debug:
+    msg: "Configuring MPLS on {{ inventory_hostname }}"
+  when: mpls_enabled | default(true)
+
+# Generate MPLS configuration
+- name: "Generate MPLS configuration"
+  template:
+    src: mpls.j2
+    dest: "/tmp/{{ inventory_hostname }}_mpls.cfg"
+  delegate_to: localhost
+  when: mpls_enabled | default(true)
+
+- name: "Read MPLS configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_mpls.cfg"
+  register: mpls_config_raw
+  delegate_to: localhost
+  when: mpls_enabled | default(true)
+
+- name: "Parse MPLS commands"
+  set_fact:
+    mpls_commands: "{{ (mpls_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: mpls_enabled | default(true)
+
+# Apply MPLS configuration
+- name: "Apply MPLS configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ mpls_commands }}"
+  register: mpls_result
+  when: 
+    - mpls_enabled | default(true)
+    - mpls_commands | length > 0
+
+# Verify MPLS status
+- name: "Verify MPLS status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ mpls_network_instance }} mpls"
+  register: mpls_status
+  when: mpls_enabled | default(true)
+
+- name: "Display MPLS summary"
+  debug:
+    msg: |
+      ✅ MPLS Configuration Complete
+      ────────────────────────────────
+      Device: {{ inventory_hostname }}
+      MPLS Interfaces: {{ mpls_interfaces | length }}
+      LDP: {{ mpls_ldp_enabled | default(false) | ternary('Enabled', 'Disabled') }}
+      RSVP-TE: {{ mpls_rsvp_enabled | default(false) | ternary('Enabled', 'Disabled') }}
+      Static LSPs: {{ mpls_static_lsps | length }}
+      Static Labels: {{ mpls_static_label_start }}-{{ mpls_static_label_end }}
+      Dynamic Labels: {{ mpls_dynamic_label_start }}-{{ mpls_dynamic_label_end }}
+  when: mpls_enabled | default(true)
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_mpls.cfg"
+    state: absent
+  delegate_to: localhost
+

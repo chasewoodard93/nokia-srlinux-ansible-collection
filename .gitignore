@@ -1,0 +1,37 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+*.tar.gz
+dist/
+build/
+*.egg-info/
+
+# Ansible
+*.retry
+.ansible/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing artifacts
+.pytest_cache/
+.tox/
+htmlcov/
+.coverage
+
+# Logs
+*.log
+

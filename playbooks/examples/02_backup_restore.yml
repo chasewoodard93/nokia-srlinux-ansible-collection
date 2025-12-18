@@ -1,0 +1,59 @@
+---
+# 02_backup_restore.yml - Configuration Backup and Restore Examples
+#
+# Usage:
+#   # Backup all devices
+#   ansible-playbook 02_backup_restore.yml -i inventory/hosts.yml --tags backup
+#
+#   # Restore specific device
+#   ansible-playbook 02_backup_restore.yml -i inventory/hosts.yml --tags restore -l leaf1 \
+#     -e "restore_file=/backups/leaf1_20240115.json"
+
+- name: "Configuration Backup"
+  hosts: all
+  gather_facts: false
+  tags: [backup]
+  
+  vars:
+    backup_base_dir: "./backups"
+    backup_per_device: true
+    backup_format: "json"
+    backup_retention_enabled: true
+    backup_retention_days: 30
+
+  tasks:
+    - name: "Run backup role"
+      import_role:
+        name: chasewoodard93.srlinux.config_backup
+
+- name: "Configuration Restore"
+  hosts: all
+  gather_facts: false
+  tags: [restore, never]
+  
+  vars:
+    # restore_file must be provided via -e or in host_vars
+    # restore_file: "/backups/device_backup.json"
+    restore_mode: "merge"  # merge or replace
+    restore_pre_backup: true
+
+  tasks:
+    - name: "Verify restore file is specified"
+      fail:
+        msg: "restore_file variable must be specified with -e restore_file=/path/to/backup"
+      when: restore_file is not defined
+
+    - name: "Run restore role"
+      import_role:
+        name: chasewoodard93.srlinux.config_restore
+
+- name: "Health Check After Restore"
+  hosts: all
+  gather_facts: false
+  tags: [restore, never]
+  
+  tasks:
+    - name: "Run health check"
+      import_role:
+        name: chasewoodard93.srlinux.health_check
+

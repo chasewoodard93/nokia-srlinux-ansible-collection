@@ -1,0 +1,47 @@
+{# Template for OSPF configuration #}
+{% for instance in ospf_instances %}
+{# OSPF instance configuration #}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} admin-state {{ instance.admin_state | default('enable') }}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} version {{ instance.version | default('ospf-v2') }}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} router-id {{ instance.router_id }}
+{% if instance.reference_bandwidth is defined %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} reference-bandwidth {{ instance.reference_bandwidth }}
+{% endif %}
+
+{# Area configuration #}
+{% for area in instance.areas %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }}
+{% if area.type is defined and area.type != 'normal' %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }} area-type {{ area.type }}
+{% if area.type == 'stub' and area.default_metric is defined %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }} stub default-metric {{ area.default_metric }}
+{% endif %}
+{% endif %}
+
+{# Interface configuration #}
+{% for intf in area.interfaces %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }} interface {{ intf.name }} admin-state enable
+{% if intf.passive | default(false) %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }} interface {{ intf.name }} passive true
+{% endif %}
+{% if intf.interface_type is defined %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }} interface {{ intf.name }} interface-type {{ intf.interface_type }}
+{% endif %}
+{% if intf.metric is defined %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }} interface {{ intf.name }} metric {{ intf.metric }}
+{% endif %}
+{% if intf.hello_interval is defined %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }} interface {{ intf.name }} hello-interval {{ intf.hello_interval }}
+{% endif %}
+{% if intf.dead_interval is defined %}
+set / network-instance {{ instance.network_instance }} protocols ospf instance {{ instance.instance_id | default(0) }} area {{ area.area_id }} interface {{ intf.name }} dead-interval {{ intf.dead_interval }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+
+{# OSPF redistribution #}
+{% for redist in ospf_redistribution %}
+set / network-instance {{ redist.network_instance }} protocols ospf instance 0 export-policy {{ redist.policy }}
+{% endfor %}
+

@@ -1,0 +1,6 @@
+{# BGP IPv4 unicast address family configuration #}
+{# Enables IPv4 unicast and configures ECMP multipath #}
+
+set / network-instance {{ network_instance }} protocols bgp ipv4-unicast admin-state enable
+set / network-instance {{ network_instance }} protocols bgp ipv4-unicast multipath max-paths-level-1 {{ bgp_ecmp_max_paths }}
+

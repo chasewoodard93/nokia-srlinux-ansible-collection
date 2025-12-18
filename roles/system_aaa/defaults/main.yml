@@ -1,0 +1,109 @@
+---
+# defaults/main.yml - Default variables for system_aaa role
+
+# ============================================================================
+# LOCAL USERS
+# ============================================================================
+
+# List of local users to configure
+# aaa_users:
+#   - name: "operator"
+#     password: "SecurePass123!"
+#     role: "admin"  # admin, or custom role
+#   - name: "readonly"
+#     password: "ReadOnly123!"
+#     role: "admin"
+
+aaa_users: []
+
+# Remove users not in the list (careful!)
+aaa_purge_users: false
+
+# Users to never remove (protected)
+aaa_protected_users:
+  - admin
+  - linuxadmin
+
+# ============================================================================
+# AUTHENTICATION ORDER
+# ============================================================================
+
+# Authentication methods in order of preference
+# Options: local, tacacs, radius
+aaa_authentication_order:
+  - local
+
+# ============================================================================
+# TACACS+ CONFIGURATION
+# ============================================================================
+
+# Enable TACACS+ authentication
+aaa_tacacs_enabled: false
+
+# TACACS+ servers
+# aaa_tacacs_servers:
+#   - address: "192.168.1.10"
+#     secret: "tacacs_secret"
+#     port: 49
+#     timeout: 5
+#     priority: 1
+#   - address: "192.168.1.11"
+#     secret: "tacacs_secret"
+#     priority: 2
+
+aaa_tacacs_servers: []
+
+# TACACS+ timeout (seconds)
+aaa_tacacs_timeout: 5
+
+# ============================================================================
+# RADIUS CONFIGURATION
+# ============================================================================
+
+# Enable RADIUS authentication
+aaa_radius_enabled: false
+
+# RADIUS servers
+# aaa_radius_servers:
+#   - address: "192.168.1.20"
+#     secret: "radius_secret"
+#     auth_port: 1812
+#     acct_port: 1813
+#     timeout: 5
+#     priority: 1
+
+aaa_radius_servers: []
+
+# RADIUS timeout (seconds)
+aaa_radius_timeout: 5
+
+# ============================================================================
+# AUTHORIZATION
+# ============================================================================
+
+# Authorization method: local, tacacs, radius
+aaa_authorization_method: "local"
+
+# ============================================================================
+# SESSION SETTINGS
+# ============================================================================
+
+# Idle timeout in minutes (0 = disabled)
+aaa_idle_timeout: 30
+
+# Maximum concurrent sessions per user (0 = unlimited)
+aaa_max_sessions: 0
+
+# ============================================================================
+# PASSWORD POLICY
+# ============================================================================
+
+# Minimum password length
+aaa_password_min_length: 8
+
+# Password complexity requirements
+aaa_password_require_uppercase: false
+aaa_password_require_lowercase: false
+aaa_password_require_numeric: false
+aaa_password_require_special: false
+

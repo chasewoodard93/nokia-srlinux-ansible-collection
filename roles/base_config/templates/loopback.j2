@@ -1,0 +1,8 @@
+{# Loopback interface (system0) configuration template #}
+{# This interface is used as BGP router ID and VXLAN source IP #}
+
+set / interface system0 admin-state enable
+set / interface system0 subinterface 0 admin-state enable
+set / interface system0 subinterface 0 ipv4 admin-state enable
+set / interface system0 subinterface 0 ipv4 address {{ loopback_ip }}
+

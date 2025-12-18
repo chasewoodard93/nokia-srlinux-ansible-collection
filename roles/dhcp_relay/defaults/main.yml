@@ -1,0 +1,100 @@
+---
+# defaults/main.yml - Default variables for dhcp_relay role
+# DHCP Relay Agent configuration
+
+# ============================================================================
+# DHCP RELAY CONFIGURATION
+# ============================================================================
+
+# DHCP relay instances
+# dhcp_relay_instances:
+#   - network_instance: "tenant-1"
+#     admin_state: "enable"
+#     servers:
+#       - address: "10.100.1.10"
+#       - address: "10.100.1.11"
+#     interfaces:
+#       - "irb0.100"
+#       - "irb0.200"
+#     options:
+#       option82: true
+#       option82_circuit_id: "%interface"
+#       option82_remote_id: "%system-name"
+#       source_address: "10.100.1.1"
+#       use_gi_address: true
+
+dhcp_relay_instances: []
+
+# ============================================================================
+# GLOBAL DHCP RELAY SETTINGS
+# ============================================================================
+
+# Enable DHCP relay globally
+dhcp_relay_enabled: true
+
+# ============================================================================
+# OPTION 82 (RELAY AGENT INFORMATION)
+# ============================================================================
+
+# Enable Option 82 by default
+dhcp_option82_enabled: true
+
+# Option 82 sub-option formats
+# Circuit-ID format: %interface, %vlan, %port, or custom string
+dhcp_option82_circuit_id: "%interface"
+
+# Remote-ID format: %system-name, %mac, or custom string
+dhcp_option82_remote_id: "%system-name"
+
+# Option 82 policy: keep, replace, drop
+dhcp_option82_policy: "replace"
+
+# ============================================================================
+# DHCPv6 RELAY CONFIGURATION
+# ============================================================================
+
+# DHCPv6 relay instances
+# dhcpv6_relay_instances:
+#   - network_instance: "tenant-1"
+#     admin_state: "enable"
+#     servers:
+#       - address: "2001:db8:100::10"
+#     interfaces:
+#       - "irb0.100"
+
+dhcpv6_relay_instances: []
+
+# Enable DHCPv6 relay
+dhcpv6_relay_enabled: false
+
+# ============================================================================
+# DHCP RELAY INTERFACE SETTINGS
+# ============================================================================
+
+# Trusted interfaces (no Option 82 validation)
+# dhcp_trusted_interfaces:
+#   - "ethernet-1/1"
+
+dhcp_trusted_interfaces: []
+
+# ============================================================================
+# DHCP RELAY SERVERS
+# ============================================================================
+
+# Global DHCP servers (used if not specified per-instance)
+# dhcp_global_servers:
+#   - address: "10.100.1.10"
+#   - address: "10.100.1.11"
+
+dhcp_global_servers: []
+
+# ============================================================================
+# ADVANCED SETTINGS
+# ============================================================================
+
+# Maximum hop count
+dhcp_max_hop_count: 10
+
+# Relay forward policy: append, replace
+dhcp_relay_forward_policy: "append"
+

@@ -1,0 +1,29 @@
+{# Template for CPM filter configuration #}
+{% for entry in cpm_filter_entries %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} action {{ entry.action }}
+{% if entry.description is defined %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} description "{{ entry.description }}"
+{% endif %}
+{% if entry.protocol is defined %}
+{% if entry.protocol == 'tcp' %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} match ipv4 protocol tcp
+{% if entry.destination_port is defined %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} match transport destination-port value {{ entry.destination_port }}
+{% endif %}
+{% if entry.source_port is defined %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} match transport source-port value {{ entry.source_port }}
+{% endif %}
+{% elif entry.protocol == 'udp' %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} match ipv4 protocol udp
+{% if entry.destination_port is defined %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} match transport destination-port value {{ entry.destination_port }}
+{% endif %}
+{% elif entry.protocol == 'icmp' %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} match ipv4 protocol icmp
+{% endif %}
+{% endif %}
+{% if entry.source_prefix is defined %}
+set / acl cpm-filter ipv4-filter entry {{ entry.sequence }} match ipv4 source-ip prefix {{ entry.source_prefix }}
+{% endif %}
+{% endfor %}
+

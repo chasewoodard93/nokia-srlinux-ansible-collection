@@ -1,0 +1,82 @@
+{# IS-IS configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# IS-IS Instance Configuration                                                #}
+{# ============================================================================ #}
+{% if isis_net is defined %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} admin-state {{ isis_admin_state }}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} net [ {{ isis_net }} ]
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} level-capability {{ isis_level_type }}
+
+{# IPv4 unicast #}
+{% if isis_ipv4_enabled | default(true) %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} ipv4-unicast admin-state enable
+{% endif %}
+
+{# IPv6 unicast #}
+{% if isis_ipv6_enabled | default(false) %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} ipv6-unicast admin-state enable
+{% endif %}
+
+{# ============================================================================ #}
+{# IS-IS Timers                                                                #}
+{# ============================================================================ #}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} timers lsp-lifetime {{ isis_lsp_lifetime | default(1200) }}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} timers spf-wait initial-wait {{ isis_spf_interval_initial | default(50) }}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} timers spf-wait max-wait {{ isis_spf_interval_max | default(5000) }}
+
+{# ============================================================================ #}
+{# IS-IS Level Configuration                                                   #}
+{# ============================================================================ #}
+{% if isis_level_type in ['level-2', 'level-1-2'] %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} level 2 metric-style wide
+{% endif %}
+{% if isis_level_type in ['level-1', 'level-1-2'] %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} level 1 metric-style wide
+{% endif %}
+
+{# ============================================================================ #}
+{# IS-IS Authentication                                                        #}
+{# ============================================================================ #}
+{% if isis_auth_enabled | default(false) and isis_auth_key is defined %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} level 2 authentication-key "{{ isis_auth_key }}"
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} level 2 authentication-type {{ isis_auth_type | default('md5') }}
+{% endif %}
+
+{# ============================================================================ #}
+{# IS-IS Overload                                                              #}
+{# ============================================================================ #}
+{% if isis_overload_bit | default(false) %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} overload-bit always
+{% endif %}
+{% if isis_overload_on_startup | default(0) > 0 %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} overload-bit on-start-up {{ isis_overload_on_startup }}
+{% endif %}
+
+{# ============================================================================ #}
+{# IS-IS Interfaces                                                            #}
+{# ============================================================================ #}
+{% for intf in isis_interfaces %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} interface {{ intf.name }} admin-state enable
+{% if intf.circuit_type is defined %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} interface {{ intf.name }} circuit-type {{ intf.circuit_type }}
+{% endif %}
+{% if intf.passive | default(false) %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} interface {{ intf.name }} passive true
+{% endif %}
+{% if intf.level is defined %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} interface {{ intf.name }} level {{ intf.level | replace('level-', '') }} metric {{ intf.metric | default(isis_default_metric) }}
+{% endif %}
+{% if intf.bfd | default(false) %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} interface {{ intf.name }} level 2 bfd-enabled true
+{% endif %}
+{% if intf.hello_interval is defined %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} interface {{ intf.name }} hello-interval {{ intf.hello_interval }}
+{% endif %}
+{% if intf.hello_multiplier is defined %}
+set / network-instance {{ isis_network_instance }} protocols isis instance {{ isis_instance_name }} interface {{ intf.name }} hello-multiplier {{ intf.hello_multiplier }}
+{% endif %}
+{% endfor %}
+
+{% endif %}
+

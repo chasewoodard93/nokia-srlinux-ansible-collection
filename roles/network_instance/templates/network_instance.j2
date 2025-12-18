@@ -1,0 +1,81 @@
+{# Network Instance configuration template for SR Linux #}
+
+{% for ni in network_instances %}
+{# ============================================================================ #}
+{# Network Instance: {{ ni.name }}                                             #}
+{# ============================================================================ #}
+
+{# Create network instance with type #}
+set / network-instance {{ ni.name }} type {{ ni.type | default('ip-vrf') }}
+
+{# Description #}
+{% if ni.description is defined %}
+set / network-instance {{ ni.name }} description "{{ ni.description }}"
+{% endif %}
+
+{# Admin state #}
+set / network-instance {{ ni.name }} admin-state {{ ni.admin_state | default(ni_default_admin_state) }}
+
+{# Router ID (for default and ip-vrf types) #}
+{% if ni.router_id is defined and ni.type in ['default', 'ip-vrf'] %}
+set / network-instance {{ ni.name }} router-id {{ ni.router_id }}
+{% endif %}
+
+{# ============================================================================ #}
+{# IP-VRF Specific Configuration                                               #}
+{# ============================================================================ #}
+{% if ni.type == 'ip-vrf' %}
+
+{# Route Distinguisher and Route Targets #}
+{% if ni.route_distinguisher is defined %}
+set / network-instance {{ ni.name }} protocols bgp-vpn bgp-instance 1 route-distinguisher rd {{ ni.route_distinguisher }}
+{% endif %}
+{% if ni.route_target_import is defined %}
+set / network-instance {{ ni.name }} protocols bgp-vpn bgp-instance 1 route-target import-rt {{ ni.route_target_import }}
+{% endif %}
+{% if ni.route_target_export is defined %}
+set / network-instance {{ ni.name }} protocols bgp-vpn bgp-instance 1 route-target export-rt {{ ni.route_target_export }}
+{% endif %}
+
+{# ECMP configuration #}
+{% if ip_vrf_ecmp_enabled | default(true) %}
+set / network-instance {{ ni.name }} ip-forwarding receive-ipv4-check false
+{% endif %}
+
+{% endif %}
+
+{# ============================================================================ #}
+{# MAC-VRF Specific Configuration                                              #}
+{# ============================================================================ #}
+{% if ni.type == 'mac-vrf' %}
+
+{# MAC Learning #}
+set / network-instance {{ ni.name }} bridge-table mac-learning admin-state {{ 'enable' if mac_learning_enabled else 'disable' }}
+set / network-instance {{ ni.name }} bridge-table mac-limit maximum-entries {{ ni.mac_limit | default(mac_limit) }}
+
+{# MAC Aging #}
+{% if mac_aging_time is defined %}
+set / network-instance {{ ni.name }} bridge-table mac-learning aging admin-state {{ 'enable' if mac_aging_time > 0 else 'disable' }}
+{% if mac_aging_time > 0 %}
+set / network-instance {{ ni.name }} bridge-table mac-learning aging age-time {{ mac_aging_time }}
+{% endif %}
+{% endif %}
+
+{# MAC Duplicate Detection #}
+{% if mac_duplicate_detection | default(true) %}
+set / network-instance {{ ni.name }} bridge-table mac-duplication admin-state enable
+{% endif %}
+
+{% endif %}
+
+{% endfor %}
+
+{# ============================================================================ #}
+{# Interface Bindings                                                          #}
+{# ============================================================================ #}
+{% for binding in ni_interface_bindings %}
+{% for intf in binding.interfaces %}
+set / network-instance {{ binding.network_instance }} interface {{ intf }}
+{% endfor %}
+{% endfor %}
+

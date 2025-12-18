@@ -1,0 +1,106 @@
+---
+# Example Playbook: Segment Routing Configuration
+# Configures SR-MPLS and SRv6 for traffic engineering
+#
+# Usage:
+#   ansible-playbook 18_segment_routing.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - SR-MPLS with SRGB/SRLB configuration
+#   - Prefix SID assignment
+#   - TI-LFA (Topology Independent Loop-Free Alternate)
+#   - SRv6 locator and SID configuration
+#   - SR policies for traffic engineering
+
+- name: Configure Segment Routing
+  hosts: srlinux
+  gather_facts: false
+  vars:
+    # SR-MPLS configuration
+    sr_mpls_config:
+      admin_state: enable
+      # Segment Routing Global Block
+      srgb:
+        start: 16000
+        end: 23999
+      # Segment Routing Local Block
+      srlb:
+        start: 15000
+        end: 15999
+      # Prefix SIDs
+      prefix_sids:
+        - prefix: 10.0.0.1/32
+          index: 1
+          algorithm: 0
+        - prefix: 10.0.0.1/32
+          index: 101
+          algorithm: 128
+      # TI-LFA configuration
+      ti_lfa:
+        admin_state: enable
+        node_protection: true
+        
+    # SRv6 configuration (optional)
+    srv6_config:
+      admin_state: enable
+      locator:
+        name: loc1
+        prefix: "fc00:0:1::/48"
+        # SIDs
+        static_sids:
+          - function: end
+            value: "fc00:0:1::1"
+          - function: end-x
+            value: "fc00:0:1::10"
+            
+    # SR Policies for traffic engineering
+    sr_policies:
+      - name: policy-to-egress
+        admin_state: enable
+        color: 100
+        endpoint: 10.0.0.5
+        binding_sid: 15100
+        candidate_paths:
+          - preference: 100
+            segment_lists:
+              - weight: 1
+                segments:
+                  - 16002
+                  - 16005
+
+  tasks:
+    - name: Display Segment Routing configuration
+      ansible.builtin.debug:
+        msg: |
+          SR-MPLS Configuration:
+          - SRGB: {{ sr_mpls_config.srgb.start }} - {{ sr_mpls_config.srgb.end }}
+          - SRLB: {{ sr_mpls_config.srlb.start }} - {{ sr_mpls_config.srlb.end }}
+          - Prefix SIDs: {{ sr_mpls_config.prefix_sids | length }}
+          - TI-LFA: {{ sr_mpls_config.ti_lfa.admin_state }}
+          
+          SR Policies: {{ sr_policies | length }}
+
+    - name: Apply Segment Routing configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.segment_routing
+      vars:
+        segment_routing_enabled: true
+        segment_routing_mpls: "{{ sr_mpls_config }}"
+        segment_routing_srv6: "{{ srv6_config }}"
+        segment_routing_policies: "{{ sr_policies }}"
+
+    - name: Verify Segment Routing configuration
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - show network-instance default segment-routing mpls global-block
+          - show network-instance default segment-routing mpls local-prefix-sid
+          - show network-instance default tunnel-table all
+      register: sr_status
+
+    - name: Display Segment Routing status
+      ansible.builtin.debug:
+        var: sr_status.stdout_lines
+

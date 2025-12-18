@@ -1,0 +1,77 @@
+---
+# tasks/main.yml - Main tasks for lldp role
+
+- name: "Display LLDP configuration info"
+  debug:
+    msg: "Configuring LLDP on {{ inventory_hostname }}"
+  when: lldp_enabled | default(true)
+
+# Generate LLDP configuration
+- name: "Generate LLDP configuration"
+  template:
+    src: lldp.j2
+    dest: "/tmp/{{ inventory_hostname }}_lldp.cfg"
+  delegate_to: localhost
+  when: lldp_enabled | default(true)
+
+- name: "Read LLDP configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_lldp.cfg"
+  register: lldp_config_raw
+  delegate_to: localhost
+  when: lldp_enabled | default(true)
+
+- name: "Parse LLDP commands"
+  set_fact:
+    lldp_commands: "{{ (lldp_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: lldp_enabled | default(true)
+
+# Apply LLDP configuration
+- name: "Apply LLDP configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ lldp_commands }}"
+  register: lldp_result
+  when: 
+    - lldp_enabled | default(true)
+    - lldp_commands | length > 0
+
+# Verify LLDP neighbors
+- name: "Verify LLDP neighbors"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system lldp neighbor"
+  register: lldp_neighbors
+  when: lldp_enabled | default(true)
+
+- name: "Display LLDP neighbors"
+  debug:
+    msg: "{{ lldp_neighbors.stdout_lines[0] | default('No LLDP neighbors discovered yet') }}"
+  when: lldp_enabled | default(true)
+
+- name: "Display LLDP summary"
+  debug:
+    msg: |
+      ✅ LLDP Configuration Complete
+      ───────────────────────────────
+      Device: {{ inventory_hostname }}
+      LLDP: {{ lldp_enabled | default(true) | ternary('Enabled', 'Disabled') }}
+      TX Interval: {{ lldp_message_tx_interval | default(30) }}s
+      Hold Multiplier: {{ lldp_message_tx_hold_multiplier | default(4) }}
+      Custom Interfaces: {{ lldp_interfaces | length }}
+      Disabled Interfaces: {{ lldp_disabled_interfaces | length }}
+  when: lldp_enabled | default(true)
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_lldp.cfg"
+    state: absent
+  delegate_to: localhost
+  when: lldp_enabled | default(true)
+

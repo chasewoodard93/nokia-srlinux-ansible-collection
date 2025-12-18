@@ -1,0 +1,70 @@
+---
+# tasks/main.yml - Main tasks for mirroring role
+
+- name: "Display mirroring configuration info"
+  debug:
+    msg: "Configuring port mirroring on {{ inventory_hostname }}"
+
+# Generate mirroring configuration
+- name: "Generate mirroring configuration"
+  template:
+    src: mirroring.j2
+    dest: "/tmp/{{ inventory_hostname }}_mirroring.cfg"
+  delegate_to: localhost
+  when: mirroring_destinations | length > 0
+
+- name: "Read mirroring configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_mirroring.cfg"
+  register: mirror_config_raw
+  delegate_to: localhost
+  when: mirroring_destinations | length > 0
+
+- name: "Parse mirroring commands"
+  set_fact:
+    mirror_commands: "{{ (mirror_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: mirroring_destinations | length > 0
+
+# Apply mirroring configuration
+- name: "Apply mirroring configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ mirror_commands }}"
+  register: mirror_result
+  when: 
+    - mirroring_destinations | length > 0
+    - mirror_commands | length > 0
+
+# Verify mirroring configuration
+- name: "Verify mirroring status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system mirroring"
+  register: mirror_status
+  when: mirroring_destinations | length > 0
+
+- name: "Display mirroring summary"
+  debug:
+    msg: |
+      ✅ Mirroring Configuration Complete
+      ────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Mirroring Destinations: {{ mirroring_destinations | length }}
+      Mirroring Sources: {{ mirroring_sources | length }}
+      {% for dest in mirroring_destinations %}
+      - {{ dest.name }}: {{ dest.type | default('local') }} → {{ dest.destination_interface | default(dest.destination_address) }}
+      {% endfor %}
+  when: mirroring_destinations | length > 0
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_mirroring.cfg"
+    state: absent
+  delegate_to: localhost
+

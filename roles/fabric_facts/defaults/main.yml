@@ -1,0 +1,54 @@
+---
+# defaults/main.yml - Default variables for fabric_facts role
+# These define the fabric design intent for calculating device configs
+
+# ============================================================================
+# TOPOLOGY DEFINITION
+# ============================================================================
+# Define which devices are spines and which are leafs
+topology:
+  spines:
+    - spine1
+    - spine2
+  leafs:
+    - leaf1
+    - leaf2
+    - leaf3
+    - leaf4
+
+# ============================================================================
+# LOOPBACK IP SCHEME
+# ============================================================================
+# Loopback IPs are used for BGP router-id and EVPN VTEP source
+loopback_scheme:
+  # Spine loopbacks: 1.1.1.x where x is spine ID
+  spine_prefix: "1.1.1"
+  # Leaf loopbacks: 2.2.2.x where x is leaf ID  
+  leaf_prefix: "2.2.2"
+  # Loopback mask
+  mask: 32
+
+# ============================================================================
+# BGP DESIGN
+# ============================================================================
+bgp_design:
+  underlay:
+    # All spines share the same ASN
+    spine_asn: 65000
+    # Leaves get sequential ASNs starting from base
+    # leaf1=65001, leaf2=65002, etc
+    leaf_asn_base: 65001
+  overlay:
+    # EVPN uses iBGP within the overlay
+    evpn_asn: 65000
+
+# ============================================================================
+# P2P LINK IP SCHEME  
+# ============================================================================
+# Point-to-point links between spines and leaves
+p2p_scheme:
+  # Base network for p2p links
+  base_network: "10.0"
+  # Each spine-leaf pair gets a /31 from 10.0.<spine_id>.<leaf_pair>
+  mask: 31
+

@@ -1,0 +1,103 @@
+---
+# Example Playbook: Event Handler Configuration
+# Configures SR Linux event handlers for automated actions
+#
+# Usage:
+#   ansible-playbook 20_event_handler.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - Event handler instance configuration
+#   - Script-based automation
+#   - Path monitoring and triggers
+#   - Event-driven network automation
+
+- name: Configure Event Handlers
+  hosts: srlinux
+  gather_facts: false
+  vars:
+    # Event handler instances
+    event_handlers:
+      # Monitor interface state and log changes
+      - name: interface-monitor
+        admin_state: enable
+        description: "Monitor interface state changes"
+        paths:
+          - "/interface[name=ethernet-1/*]/oper-state"
+        upython_script: |
+          from srlinux import mgmt
+          from srlinux.mgmt import event
+          
+          def event_handler_main(in_json):
+              # Log interface state changes
+              state = in_json.get("value")
+              interface = in_json.get("path")
+              mgmt.syslog(f"Interface {interface} changed to {state}")
+        options:
+          run_on_startup: true
+          
+      # Track BGP session and trigger action
+      - name: bgp-session-tracker
+        admin_state: enable
+        description: "Track BGP session state"
+        paths:
+          - "/network-instance[name=default]/protocols/bgp/neighbor[peer-address=*]/session-state"
+        upython_script: |
+          from srlinux import mgmt
+          
+          def event_handler_main(in_json):
+              state = in_json.get("value")
+              peer = in_json.get("path")
+              if state == "down":
+                  mgmt.syslog(f"BGP session {peer} went DOWN", severity="warning")
+        options:
+          run_on_startup: false
+          
+      # System health monitoring
+      - name: system-health
+        admin_state: enable
+        description: "Monitor system health metrics"
+        paths:
+          - "/platform/control[slot=A]/cpu[index=all]/total/average"
+          - "/platform/control[slot=A]/memory/physical"
+        upython_script: |
+          from srlinux import mgmt
+          
+          def event_handler_main(in_json):
+              value = in_json.get("value")
+              path = in_json.get("path")
+              if "cpu" in path and int(value) > 80:
+                  mgmt.syslog(f"High CPU: {value}%", severity="warning")
+        options:
+          run_on_startup: true
+
+  tasks:
+    - name: Display event handlers to configure
+      ansible.builtin.debug:
+        msg: |
+          Configuring {{ event_handlers | length }} event handlers:
+          {% for eh in event_handlers %}
+          - {{ eh.name }}: {{ eh.description }}
+            Paths monitored: {{ eh.paths | length }}
+          {% endfor %}
+
+    - name: Apply event handler configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.event_handler
+      vars:
+        event_handler_enabled: true
+        event_handler_instances: "{{ event_handlers }}"
+
+    - name: Verify event handler configuration
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - info from running /system event-handler
+          - show system event-handler instance
+      register: eh_status
+
+    - name: Display event handler status
+      ansible.builtin.debug:
+        var: eh_status.stdout_lines
+

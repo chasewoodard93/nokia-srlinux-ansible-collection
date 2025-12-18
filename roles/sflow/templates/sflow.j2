@@ -1,0 +1,46 @@
+{# sFlow configuration template for SR Linux #}
+
+{# ============================================================================ #}
+{# sFlow Global Configuration                                                  #}
+{# ============================================================================ #}
+{% if sflow_enabled | default(true) %}
+set / system sflow admin-state {{ sflow_admin_state | default('enable') }}
+
+{# Agent address #}
+{% if sflow_agent_address is defined %}
+set / system sflow agent-id {{ sflow_agent_address }}
+{% endif %}
+
+{# Sample rate #}
+set / system sflow sample-rate {{ sflow_sample_rate | default(10000) }}
+
+{# Sample size #}
+set / system sflow sample-size {{ sflow_sample_size | default(256) }}
+
+{% endif %}
+
+{# ============================================================================ #}
+{# sFlow Collectors                                                            #}
+{# ============================================================================ #}
+{% for collector in sflow_collectors %}
+set / system sflow collector {{ collector.name }} collector-address {{ collector.address }}
+set / system sflow collector {{ collector.name }} port {{ collector.port | default(sflow_default_port) }}
+set / system sflow collector {{ collector.name }} network-instance {{ collector.network_instance | default(sflow_default_network_instance) }}
+{% endfor %}
+
+{# ============================================================================ #}
+{# sFlow Interface Configuration                                               #}
+{# ============================================================================ #}
+{% for intf in sflow_interfaces %}
+set / interface {{ intf.name }} sflow admin-state enable
+{% if intf.sample_rate is defined %}
+set / interface {{ intf.name }} sflow sample-rate {{ intf.sample_rate }}
+{% endif %}
+{% if intf.ingress | default(sflow_default_ingress) %}
+set / interface {{ intf.name }} sflow ingress sampling true
+{% endif %}
+{% if intf.egress | default(sflow_default_egress) %}
+set / interface {{ intf.name }} sflow egress sampling true
+{% endif %}
+{% endfor %}
+

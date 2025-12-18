@@ -1,0 +1,81 @@
+---
+# tasks/main.yml - Main tasks for qos role
+
+- name: "Display QoS configuration info"
+  debug:
+    msg: "Configuring QoS on {{ inventory_hostname }}"
+  when: qos_enabled | default(true)
+
+- name: "Check if QoS configuration needed"
+  set_fact:
+    _qos_config_needed: "{{ (qos_dscp_classifiers | length > 0) or (qos_scheduler_policies | length > 0) or (qos_policers | length > 0) or (qos_interface_policies | length > 0) }}"
+
+- name: "Skip QoS if no policies defined"
+  debug:
+    msg: "No QoS policies defined, skipping configuration"
+  when: not _qos_config_needed
+
+# Generate QoS configuration
+- name: "Generate QoS configuration"
+  template:
+    src: qos.j2
+    dest: "/tmp/{{ inventory_hostname }}_qos.cfg"
+  delegate_to: localhost
+  when: _qos_config_needed
+
+- name: "Read QoS configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_qos.cfg"
+  register: qos_config_raw
+  delegate_to: localhost
+  when: _qos_config_needed
+
+- name: "Parse QoS commands"
+  set_fact:
+    qos_commands: "{{ (qos_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: _qos_config_needed
+
+# Apply QoS configuration
+- name: "Apply QoS configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ qos_commands }}"
+  register: qos_result
+  when: 
+    - _qos_config_needed
+    - qos_commands | length > 0
+
+# Verify QoS configuration
+- name: "Verify QoS classifier policies"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show qos"
+  register: qos_status
+  when: _qos_config_needed
+
+- name: "Display QoS summary"
+  debug:
+    msg: |
+      ✅ QoS Configuration Complete
+      ─────────────────────────────
+      Device: {{ inventory_hostname }}
+      DSCP Classifiers: {{ qos_dscp_classifiers | length }}
+      Scheduler Policies: {{ qos_scheduler_policies | length }}
+      Policers: {{ qos_policers | length }}
+      Rewrite Policies: {{ qos_rewrite_policies | length }}
+      Interface Bindings: {{ qos_interface_policies | length }}
+  when: _qos_config_needed
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_qos.cfg"
+    state: absent
+  delegate_to: localhost
+  when: _qos_config_needed
+

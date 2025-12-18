@@ -1,0 +1,110 @@
+---
+# tasks/main.yml - Main tasks for config_backup role
+
+- name: "Display backup information"
+  debug:
+    msg: "Backing up configuration from {{ inventory_hostname }}"
+
+# Determine backup directory path
+- name: "Set backup directory path"
+  set_fact:
+    _backup_dir: >-
+      {{ backup_base_dir }}{% if backup_per_device %}/{{ inventory_hostname }}{% endif %}{% if backup_per_date %}/{{ ansible_date_time.date }}{% endif %}
+
+- name: "Ensure backup directory exists"
+  delegate_to: localhost
+  file:
+    path: "{{ _backup_dir }}"
+    state: directory
+    mode: '0755'
+
+# Perform backup using the srlinux_backup module
+- name: "Backup device configuration"
+  chasewoodard93.srlinux.srlinux_backup:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    backup_dir: "{{ _backup_dir }}"
+    format: "{{ backup_format }}"
+    config_type: "{{ backup_config_type }}"
+    include_timestamp: "{{ backup_include_timestamp }}"
+    filename: "{{ backup_filename_prefix | default(omit) }}"
+  register: backup_result
+
+- name: "Store backup result for summary"
+  set_fact:
+    _backup_info:
+      hostname: "{{ backup_result.hostname }}"
+      path: "{{ backup_result.backup_path }}"
+      size: "{{ backup_result.config_size }}"
+      lines: "{{ backup_result.config_lines }}"
+
+# Verify backup
+- name: "Verify backup file exists"
+  delegate_to: localhost
+  stat:
+    path: "{{ backup_result.backup_path }}"
+  register: backup_file_stat
+  when: backup_verify
+
+- name: "Verify backup file size"
+  assert:
+    that:
+      - backup_file_stat.stat.exists
+      - backup_file_stat.stat.size >= backup_min_size
+    fail_msg: "Backup verification failed - file missing or too small"
+    success_msg: "Backup verified: {{ backup_result.backup_path }} ({{ backup_file_stat.stat.size }} bytes)"
+  when: backup_verify
+
+# Retention cleanup (if enabled)
+- name: "Find old backup files"
+  delegate_to: localhost
+  find:
+    paths: "{{ _backup_dir }}"
+    patterns: "*.cfg,*.json"
+    age: "{{ backup_retention_days }}d"
+  register: old_backups
+  when: backup_retention_enabled and backup_retention_days > 0
+
+- name: "Remove old backup files"
+  delegate_to: localhost
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_backups.files }}"
+  when: backup_retention_enabled and backup_retention_days > 0 and old_backups.files | length > 0
+
+# Max files retention (if enabled)
+- name: "Find all backup files for max retention"
+  delegate_to: localhost
+  find:
+    paths: "{{ _backup_dir }}"
+    patterns: "{{ inventory_hostname }}*.cfg,{{ inventory_hostname }}*.json"
+  register: all_backups
+  when: backup_max_files > 0
+
+- name: "Calculate files to remove for max retention"
+  set_fact:
+    _files_to_remove: "{{ (all_backups.files | sort(attribute='mtime'))[:-backup_max_files] }}"
+  when: backup_max_files > 0 and all_backups.files | length > backup_max_files
+
+- name: "Remove excess backup files"
+  delegate_to: localhost
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ _files_to_remove }}"
+  when: backup_max_files > 0 and _files_to_remove is defined and _files_to_remove | length > 0
+
+# Summary
+- name: "Display backup summary"
+  debug:
+    msg: |
+      ✅ Backup Complete
+      ────────────────────────────
+      Device: {{ _backup_info.hostname }}
+      File: {{ _backup_info.path }}
+      Size: {{ _backup_info.size }} bytes
+      Lines: {{ _backup_info.lines }}
+  when: backup_show_summary
+

@@ -1,0 +1,46 @@
+---
+# defaults/main.yml - Default variables for system_dns role
+
+# ============================================================================
+# DNS SERVER CONFIGURATION
+# ============================================================================
+
+# DNS servers to configure (in order of preference)
+dns_servers:
+  - "8.8.8.8"
+  - "8.8.4.4"
+
+# ============================================================================
+# DNS DOMAIN CONFIGURATION
+# ============================================================================
+
+# Default domain name for unqualified hostnames
+# dns_domain: "example.com"
+
+# Search domains (list)
+# dns_search_domains:
+#   - "example.com"
+#   - "corp.example.com"
+
+dns_search_domains: []
+
+# ============================================================================
+# DNS NETWORK INSTANCE
+# ============================================================================
+
+# Network instance to use for DNS resolution
+dns_network_instance: "mgmt"
+
+# ============================================================================
+# DNS OPTIONS
+# ============================================================================
+
+# Enable DNS resolution
+dns_enabled: true
+
+# DNS timeout in seconds
+dns_timeout: 5
+
+# Number of retries for DNS queries
+dns_retries: 2
+

@@ -1,0 +1,103 @@
+---
+# defaults/main.yml - Default variables for esi_multihoming role
+# EVPN Multi-Homing with Ethernet Segment Identifier (ESI)
+
+# ============================================================================
+# ETHERNET SEGMENT CONFIGURATION
+# ============================================================================
+
+# Ethernet Segments for EVPN multi-homing
+# ethernet_segments:
+#   - name: "ES-Server1"
+#     esi: "00:11:22:33:44:55:66:77:88:99"  # 10-byte ESI (Type 0)
+#     esi_type: "manual"                    # manual or auto-lacp
+#     interface: "lag1"                     # LAG or single interface
+#     multi_homing_mode: "all-active"       # all-active or single-active
+#     df_election:
+#       algorithm: "default"               # default, preference, or modulo
+#       preference: 100                    # Higher = more preferred (1-65535)
+#       revertive: true
+#     activation_timer: 3                  # Seconds to wait before activating
+
+ethernet_segments: []
+
+# ============================================================================
+# ESI AUTO-DERIVATION
+# ============================================================================
+
+# Auto-derive ESI from LACP system-id (Type 1)
+esi_auto_lacp_enabled: false
+
+# System ID for LACP-based ESI (if auto-derive)
+# esi_lacp_system_id: "00:00:00:00:00:01"
+
+# ============================================================================
+# DESIGNATED FORWARDER (DF) ELECTION
+# ============================================================================
+
+# Default DF election algorithm
+df_election_algorithm: "default"  # default, preference, modulo
+
+# DF election wait timer (seconds)
+df_election_wait_timer: 3
+
+# ============================================================================
+# SPLIT HORIZON
+# ============================================================================
+
+# Enable split horizon for multi-homed segments
+split_horizon_enabled: true
+
+# ============================================================================
+# MAC MOBILITY
+# ============================================================================
+
+# MAC mobility duplicate detection
+mac_mobility_duplicate_detection: true
+
+# MAC mobility duplicate detection threshold
+mac_mobility_threshold: 5
+
+# MAC mobility duplicate detection window (seconds)
+mac_mobility_window: 180
+
+# ============================================================================
+# MASS WITHDRAWAL
+# ============================================================================
+
+# Enable mass withdrawal on ESI failure
+mass_withdrawal_enabled: true
+
+# ============================================================================
+# ALIASING
+# ============================================================================
+
+# Enable aliasing for load balancing across ES peers
+aliasing_enabled: true
+
+# ============================================================================
+# EXAMPLE: DUAL-HOMED SERVER CONFIGURATION
+# ============================================================================
+
+# ethernet_segments:
+#   - name: "ES-Rack1-Server1"
+#     esi: "00:00:00:00:00:00:01:01:01:01"
+#     interface: "lag1"
+#     multi_homing_mode: "all-active"
+#     df_election:
+#       algorithm: "preference"
+#       preference: 32767
+#   - name: "ES-Rack1-Server2"
+#     esi: "00:00:00:00:00:00:01:01:01:02"
+#     interface: "lag2"
+#     multi_homing_mode: "all-active"
+#     df_election:
+#       algorithm: "default"
+
+# ============================================================================
+# NETWORK INSTANCE ASSOCIATION
+# ============================================================================
+
+# Network instance for ES (usually default for underlay)
+es_network_instance: "default"
+

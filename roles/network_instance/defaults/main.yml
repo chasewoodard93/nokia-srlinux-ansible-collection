@@ -1,0 +1,110 @@
+---
+# defaults/main.yml - Default variables for network_instance role
+# Standalone network-instance management
+
+# ============================================================================
+# NETWORK INSTANCES
+# ============================================================================
+
+# Network instances to configure
+# network_instances:
+#   - name: "default"
+#     type: "default"
+#     description: "Default network instance"
+#     admin_state: "enable"
+#     router_id: "10.0.0.1"
+#   - name: "mgmt"
+#     type: "ip-vrf"
+#     description: "Management VRF"
+#     admin_state: "enable"
+#   - name: "tenant-1"
+#     type: "ip-vrf"
+#     description: "Tenant 1 IP-VRF"
+#     admin_state: "enable"
+#     route_distinguisher: "65000:100"
+#     route_target_import: "target:65000:100"
+#     route_target_export: "target:65000:100"
+#   - name: "vlan-100"
+#     type: "mac-vrf"
+#     description: "VLAN 100 MAC-VRF"
+#     admin_state: "enable"
+
+network_instances: []
+
+# ============================================================================
+# NETWORK INSTANCE TYPES
+# ============================================================================
+
+# Supported types:
+# - default: Default routing instance (only one per device)
+# - ip-vrf: Layer 3 VRF for IP routing
+# - mac-vrf: Layer 2 bridge domain for MAC learning
+# - vpws: Virtual Private Wire Service (point-to-point)
+
+# ============================================================================
+# DEFAULT SETTINGS
+# ============================================================================
+
+# Default admin state for network instances
+ni_default_admin_state: "enable"
+
+# Enable IP forwarding by default for IP-VRFs
+ni_ip_forwarding: true
+
+# ============================================================================
+# MAC-VRF SPECIFIC SETTINGS
+# ============================================================================
+
+# MAC learning admin state
+mac_learning_enabled: true
+
+# MAC aging time (seconds, 0 = no aging)
+mac_aging_time: 300
+
+# Maximum MAC entries per MAC-VRF
+mac_limit: 250000
+
+# MAC duplicate detection
+mac_duplicate_detection: true
+
+# ============================================================================
+# IP-VRF SPECIFIC SETTINGS
+# ============================================================================
+
+# Enable ECMP for IP-VRFs
+ip_vrf_ecmp_enabled: true
+
+# Maximum ECMP paths
+ip_vrf_ecmp_max_paths: 64
+
+# ============================================================================
+# INTERFACE BINDINGS
+# ============================================================================
+
+# Interface bindings for network instances
+# ni_interface_bindings:
+#   - network_instance: "tenant-1"
+#     interfaces:
+#       - "ethernet-1/1.100"
+#       - "irb0.100"
+#   - network_instance: "vlan-100"
+#     interfaces:
+#       - "ethernet-1/2.0"
+
+ni_interface_bindings: []
+
+# ============================================================================
+# PROTOCOLS PER NETWORK INSTANCE
+# ============================================================================
+
+# Protocol enablement per NI (configured by other roles, but can be toggled here)
+# ni_protocols:
+#   - network_instance: "default"
+#     bgp: true
+#     ospf: false
+#     isis: false
+#   - network_instance: "tenant-1"
+#     bgp_evpn: true
+
+ni_protocols: []
+

@@ -1,0 +1,131 @@
+---
+# defaults/main.yml - Default variables for mpls role
+# MPLS label switching configuration
+
+# ============================================================================
+# MPLS GLOBAL CONFIGURATION
+# ============================================================================
+
+# Network instance for MPLS
+mpls_network_instance: "default"
+
+# Enable MPLS
+mpls_enabled: true
+
+# MPLS admin state
+mpls_admin_state: "enable"
+
+# ============================================================================
+# MPLS INTERFACES
+# ============================================================================
+
+# MPLS-enabled interfaces
+# mpls_interfaces:
+#   - name: "ethernet-1/1.0"
+#     admin_state: "enable"
+#   - name: "ethernet-1/2.0"
+#     admin_state: "enable"
+
+mpls_interfaces: []
+
+# ============================================================================
+# LABEL RANGES
+# ============================================================================
+
+# Static label range
+mpls_static_label_start: 100
+mpls_static_label_end: 999
+
+# Dynamic label range
+mpls_dynamic_label_start: 1000
+mpls_dynamic_label_end: 14999
+
+# ============================================================================
+# LDP CONFIGURATION
+# ============================================================================
+
+# Enable LDP
+mpls_ldp_enabled: false
+
+# LDP router ID
+# mpls_ldp_router_id: "10.0.0.1"
+
+# LDP interfaces
+# mpls_ldp_interfaces:
+#   - name: "ethernet-1/1.0"
+#     hello_interval: 5
+#     hold_time: 15
+
+mpls_ldp_interfaces: []
+
+# LDP session parameters
+mpls_ldp_keepalive_interval: 30
+mpls_ldp_keepalive_timeout: 90
+
+# ============================================================================
+# RSVP-TE CONFIGURATION
+# ============================================================================
+
+# Enable RSVP-TE
+mpls_rsvp_enabled: false
+
+# RSVP interfaces
+# mpls_rsvp_interfaces:
+#   - name: "ethernet-1/1.0"
+#     bandwidth: "10g"
+#     admin_state: "enable"
+
+mpls_rsvp_interfaces: []
+
+# RSVP refresh interval
+mpls_rsvp_refresh_interval: 30
+
+# RSVP hello interval
+mpls_rsvp_hello_interval: 3
+
+# ============================================================================
+# STATIC LSPS
+# ============================================================================
+
+# Static LSPs
+# mpls_static_lsps:
+#   - name: "to-pe2"
+#     type: "transit"
+#     in_label: 1000
+#     out_label: 2000
+#     next_hop: "10.1.1.2"
+#     out_interface: "ethernet-1/1.0"
+
+mpls_static_lsps: []
+
+# ============================================================================
+# TTL PROPAGATION
+# ============================================================================
+
+# TTL propagation mode: uniform, pipe
+mpls_ttl_propagation: "uniform"
+
+# ============================================================================
+# ECMP
+# ============================================================================
+
+# Enable MPLS ECMP
+mpls_ecmp_enabled: true
+
+# Maximum ECMP paths
+mpls_ecmp_max_paths: 64
+
+# ============================================================================
+# PHP (PENULTIMATE HOP POPPING)
+# ============================================================================
+
+# Enable PHP
+mpls_php_enabled: true
+
+# ============================================================================
+# ENTROPY LABEL
+# ============================================================================
+
+# Enable entropy label capability
+mpls_entropy_label_enabled: false
+

@@ -1,0 +1,29 @@
+{# BGP peer-group configuration template #}
+{# Configures peer-groups for BGP underlay #}
+{# Note: Peer-groups must be created before neighbors can reference them #}
+
+{% if bgp_peer_groups is defined and bgp_peer_groups | length > 0 %}
+{% for group in bgp_peer_groups %}
+set / network-instance {{ network_instance }} protocols bgp group {{ group.name }} admin-state enable
+{% if group.description is defined %}
+set / network-instance {{ network_instance }} protocols bgp group {{ group.name }} description "{{ group.description }}"
+{% endif %}
+{% if group.export_policy is defined %}
+set / network-instance {{ network_instance }} protocols bgp group {{ group.name }} export-policy {{ group.export_policy }}
+{% endif %}
+{% if group.import_policy is defined %}
+set / network-instance {{ network_instance }} protocols bgp group {{ group.name }} import-policy {{ group.import_policy }}
+{% endif %}
+{% if group.afi_safi is defined %}
+{% for afi in group.afi_safi %}
+set / network-instance {{ network_instance }} protocols bgp group {{ group.name }} afi-safi {{ afi }} admin-state enable
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% else %}
+{# Default underlay peer-group if none defined #}
+set / network-instance {{ network_instance }} protocols bgp group underlay admin-state enable
+set / network-instance {{ network_instance }} protocols bgp group underlay description "Underlay eBGP peer group"
+set / network-instance {{ network_instance }} protocols bgp group underlay afi-safi ipv4-unicast admin-state enable
+{% endif %}
+

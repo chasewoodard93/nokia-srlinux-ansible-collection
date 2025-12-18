@@ -1,0 +1,75 @@
+---
+# tasks/main.yml - Main tasks for vrrp role
+
+- name: "Display VRRP configuration info"
+  debug:
+    msg: "Configuring VRRP on {{ inventory_hostname }}"
+  when: (vrrp_groups | length > 0) or (vrrp_ipv6_groups | length > 0)
+
+- name: "Skip VRRP if no groups defined"
+  debug:
+    msg: "No VRRP groups defined, skipping configuration"
+  when: (vrrp_groups | length == 0) and (vrrp_ipv6_groups | length == 0)
+
+# Generate VRRP configuration
+- name: "Generate VRRP configuration"
+  template:
+    src: vrrp.j2
+    dest: "/tmp/{{ inventory_hostname }}_vrrp.cfg"
+  delegate_to: localhost
+  when: (vrrp_groups | length > 0) or (vrrp_ipv6_groups | length > 0)
+
+- name: "Read VRRP configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_vrrp.cfg"
+  register: vrrp_config_raw
+  delegate_to: localhost
+  when: (vrrp_groups | length > 0) or (vrrp_ipv6_groups | length > 0)
+
+- name: "Parse VRRP commands"
+  set_fact:
+    vrrp_commands: "{{ (vrrp_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: (vrrp_groups | length > 0) or (vrrp_ipv6_groups | length > 0)
+
+# Apply VRRP configuration
+- name: "Apply VRRP configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ vrrp_commands }}"
+  register: vrrp_result
+  when: 
+    - (vrrp_groups | length > 0) or (vrrp_ipv6_groups | length > 0)
+    - vrrp_commands | length > 0
+
+# Verify VRRP configuration
+- name: "Verify VRRP status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show interface * subinterface * ipv4 vrrp"
+  register: vrrp_status
+  when: vrrp_groups | length > 0
+
+- name: "Display VRRP summary"
+  debug:
+    msg: |
+      ✅ VRRP Configuration Complete
+      ──────────────────────────────
+      Device: {{ inventory_hostname }}
+      IPv4 Groups: {{ vrrp_groups | length }}
+      IPv6 Groups: {{ vrrp_ipv6_groups | length }}
+      Interface Tracking: {{ vrrp_interface_tracking | length }}
+  when: (vrrp_groups | length > 0) or (vrrp_ipv6_groups | length > 0)
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_vrrp.cfg"
+    state: absent
+  delegate_to: localhost
+  when: (vrrp_groups | length > 0) or (vrrp_ipv6_groups | length > 0)
+

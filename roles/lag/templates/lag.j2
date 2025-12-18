@@ -1,0 +1,48 @@
+{# Template for LAG configuration #}
+{% for lag in lag_interfaces %}
+{# Create LAG interface #}
+set / interface {{ lag.name }} admin-state {{ lag.admin_state | default('enable') }}
+{% if lag.description is defined %}
+set / interface {{ lag.name }} description "{{ lag.description }}"
+{% endif %}
+set / interface {{ lag.name }} lag lag-type {{ 'lacp' if lag.lacp_mode | default(lag_default_lacp_mode) != 'static' else 'static' }}
+{% if lag.lacp_mode | default(lag_default_lacp_mode) != 'static' %}
+set / interface {{ lag.name }} lag lacp-mode {{ lag.lacp_mode | default(lag_default_lacp_mode) }}
+set / interface {{ lag.name }} lag lacp interval {{ lag.lacp_interval | default(lag_default_lacp_interval) }}
+{% endif %}
+set / interface {{ lag.name }} lag min-links {{ lag.min_links | default(lag_default_min_links) }}
+
+{# Add member interfaces #}
+{% for member in lag.members %}
+set / interface {{ member }} ethernet aggregate-id {{ lag.name }}
+{% endfor %}
+
+{# Configure subinterfaces on LAG #}
+{% if lag.subinterfaces is defined %}
+{% for subintf in lag.subinterfaces %}
+set / interface {{ lag.name }} subinterface {{ subintf.index }} admin-state enable
+{% if subintf.description is defined %}
+set / interface {{ lag.name }} subinterface {{ subintf.index }} description "{{ subintf.description }}"
+{% endif %}
+{% if subintf.type == 'routed' %}
+{% if subintf.ipv4_address is defined %}
+set / interface {{ lag.name }} subinterface {{ subintf.index }} ipv4 admin-state enable
+set / interface {{ lag.name }} subinterface {{ subintf.index }} ipv4 address {{ subintf.ipv4_address }}
+{% endif %}
+{% elif subintf.type == 'bridged' %}
+set / interface {{ lag.name }} subinterface {{ subintf.index }} type bridged
+{% if subintf.vlan_id is defined %}
+set / interface {{ lag.name }} subinterface {{ subintf.index }} vlan encap single-tagged vlan-id {{ subintf.vlan_id }}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+{# ESI configuration for EVPN multi-homing #}
+{% for esi_config in lag_esi %}
+set / interface {{ esi_config.lag }} ethernet-segment admin-state enable
+set / interface {{ esi_config.lag }} ethernet-segment esi {{ esi_config.esi }}
+set / interface {{ esi_config.lag }} ethernet-segment multi-homing-mode {{ esi_config.multi_homing_mode | default('all-active') }}
+{% endfor %}
+

@@ -1,0 +1,46 @@
+---
+# tasks/main.yml - Main tasks for system_logging role
+
+- name: "Display logging configuration information"
+  debug:
+    msg: "Configuring logging/syslog on {{ inventory_hostname }}"
+
+# Generate and apply logging configuration
+- name: "Generate logging configuration"
+  set_fact:
+    _logging_config: "{{ lookup('template', 'logging.j2') }}"
+
+- name: "Apply logging configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _logging_config.split('\n') | select('match', '^set ') | list }}"
+  register: logging_config_result
+  when: _logging_config.split('\n') | select('match', '^set ') | list | length > 0
+
+- name: "Display logging configuration result"
+  debug:
+    msg: "Logging configuration applied"
+
+# Verify logging configuration
+- name: "Verify logging configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info system logging"
+  register: logging_verify
+
+- name: "Logging configuration complete"
+  debug:
+    msg: |
+      ✅ Logging Configuration Complete
+      ─────────────────────────────────
+      Device: {{ inventory_hostname }}
+      File Logging: {{ logging_file_enabled }}
+      Buffer Logging: {{ logging_buffer_enabled }}
+      Remote Syslog Servers: {{ logging_syslog_servers | length }}
+      Network Instance: {{ logging_network_instance }}
+

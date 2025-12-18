@@ -1,0 +1,74 @@
+---
+# defaults/main.yml - Default variables for health_check role
+
+# ============================================================================
+# HEALTH CHECK CATEGORIES
+# ============================================================================
+
+# Enable/disable specific health checks
+health_check_system: true
+health_check_interfaces: true
+health_check_bgp: true
+health_check_memory: true
+health_check_cpu: true
+health_check_disk: true
+health_check_ntp: false
+health_check_evpn: false
+
+# ============================================================================
+# THRESHOLDS
+# ============================================================================
+
+# CPU utilization threshold (percentage)
+health_cpu_threshold: 80
+
+# Memory utilization threshold (percentage)  
+health_memory_threshold: 80
+
+# Disk utilization threshold (percentage)
+health_disk_threshold: 85
+
+# ============================================================================
+# INTERFACE CHECKS
+# ============================================================================
+
+# Check that all configured interfaces are up
+health_check_interface_state: true
+
+# Interfaces to exclude from state check (regex patterns)
+health_interface_exclude:
+  - "mgmt0"
+
+# Minimum expected interfaces in 'up' state
+health_min_interfaces_up: 1
+
+# ============================================================================
+# BGP CHECKS
+# ============================================================================
+
+# Check BGP session states
+health_check_bgp_sessions: true
+
+# Minimum expected established BGP sessions
+health_min_bgp_sessions: 0
+
+# BGP session down is critical (fail the check)
+health_bgp_down_critical: true
+
+# ============================================================================
+# OUTPUT OPTIONS
+# ============================================================================
+
+# Generate detailed health report
+health_generate_report: true
+
+# Save health report to file
+health_save_report: false
+health_report_dir: "/var/log/srlinux/health"
+
+# Fail playbook if any health check fails
+health_fail_on_error: false
+
+# Show summary at end
+health_show_summary: true
+

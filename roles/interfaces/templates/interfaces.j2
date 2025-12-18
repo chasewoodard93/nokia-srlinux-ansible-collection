@@ -1,0 +1,39 @@
+{# Template for physical interface configuration #}
+{% for intf in interfaces_physical %}
+set / interface {{ intf.name }} admin-state {{ intf.admin_state | default(interfaces_default_admin_state) }}
+{% if intf.description is defined %}
+set / interface {{ intf.name }} description "{{ intf.description }}"
+{% endif %}
+{% if intf.mtu is defined %}
+set / interface {{ intf.name }} mtu {{ intf.mtu }}
+{% endif %}
+{% endfor %}
+
+{# Subinterface configuration #}
+{% for subintf in interfaces_subinterfaces %}
+set / interface {{ subintf.interface }} subinterface {{ subintf.index }} admin-state enable
+{% if subintf.description is defined %}
+set / interface {{ subintf.interface }} subinterface {{ subintf.index }} description "{{ subintf.description }}"
+{% endif %}
+{% if subintf.type == 'routed' %}
+{% if subintf.ipv4_address is defined %}
+set / interface {{ subintf.interface }} subinterface {{ subintf.index }} ipv4 admin-state enable
+set / interface {{ subintf.interface }} subinterface {{ subintf.index }} ipv4 address {{ subintf.ipv4_address }}
+{% endif %}
+{% if subintf.ipv6_address is defined %}
+set / interface {{ subintf.interface }} subinterface {{ subintf.index }} ipv6 admin-state enable
+set / interface {{ subintf.interface }} subinterface {{ subintf.index }} ipv6 address {{ subintf.ipv6_address }}
+{% endif %}
+{% elif subintf.type == 'bridged' %}
+set / interface {{ subintf.interface }} subinterface {{ subintf.index }} type bridged
+{% if subintf.vlan_id is defined and subintf.vlan_id %}
+set / interface {{ subintf.interface }} subinterface {{ subintf.index }} vlan encap single-tagged vlan-id {{ subintf.vlan_id }}
+{% endif %}
+{% endif %}
+{% endfor %}
+
+{# Network instance bindings #}
+{% for binding in interfaces_network_instance_bindings %}
+set / network-instance {{ binding.network_instance }} interface {{ binding.interface }}.{{ binding.subinterface }}
+{% endfor %}
+

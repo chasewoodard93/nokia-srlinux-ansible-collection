@@ -1,0 +1,102 @@
+---
+# defaults/main.yml - Default variables for storm_control role
+# Broadcast/Multicast/Unknown unicast storm prevention
+
+# ============================================================================
+# STORM CONTROL POLICIES
+# ============================================================================
+
+# Storm control policies
+# storm_control_policies:
+#   - name: "server-facing"
+#     broadcast:
+#       rate: 1000         # kbps or percentage
+#       rate_unit: "kbps"  # kbps or percentage
+#       action: "drop"     # drop or shutdown
+#     multicast:
+#       rate: 5000
+#       rate_unit: "kbps"
+#       action: "drop"
+#     unknown_unicast:
+#       rate: 2000
+#       rate_unit: "kbps"
+#       action: "drop"
+#   - name: "uplink"
+#     broadcast:
+#       rate: 10
+#       rate_unit: "percentage"
+#       action: "drop"
+
+storm_control_policies: []
+
+# ============================================================================
+# INTERFACE BINDINGS
+# ============================================================================
+
+# Apply storm control to interfaces
+# storm_control_interfaces:
+#   - interface: "ethernet-1/1"
+#     policy: "server-facing"
+#   - interface: "ethernet-1/2"
+#     policy: "server-facing"
+#   - interface: "ethernet-1/49"
+#     policy: "uplink"
+
+storm_control_interfaces: []
+
+# ============================================================================
+# DEFAULT STORM CONTROL SETTINGS
+# ============================================================================
+
+# Default rate unit (kbps or percentage)
+storm_control_default_rate_unit: "kbps"
+
+# Default action (drop or shutdown)
+storm_control_default_action: "drop"
+
+# ============================================================================
+# DEFAULT RATES
+# ============================================================================
+
+# Default broadcast rate (kbps)
+storm_control_default_broadcast_rate: 10000
+
+# Default multicast rate (kbps)
+storm_control_default_multicast_rate: 10000
+
+# Default unknown unicast rate (kbps)
+storm_control_default_unknown_unicast_rate: 10000
+
+# ============================================================================
+# STORM CONTROL TYPES
+# ============================================================================
+
+# Enable broadcast storm control
+storm_control_broadcast_enabled: true
+
+# Enable multicast storm control
+storm_control_multicast_enabled: true
+
+# Enable unknown unicast storm control
+storm_control_unknown_unicast_enabled: true
+
+# ============================================================================
+# RECOVERY SETTINGS
+# ============================================================================
+
+# Auto-recovery from shutdown (if action is shutdown)
+storm_control_auto_recovery: true
+
+# Recovery interval (seconds)
+storm_control_recovery_interval: 300
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+# Log storm control events
+storm_control_logging: true
+
+# Log threshold (percentage of rate before logging)
+storm_control_log_threshold: 80
+

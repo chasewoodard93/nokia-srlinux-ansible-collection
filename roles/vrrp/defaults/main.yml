@@ -1,0 +1,103 @@
+---
+# defaults/main.yml - Default variables for vrrp role
+
+# ============================================================================
+# VRRP GROUP CONFIGURATION
+# ============================================================================
+
+# VRRP groups to configure
+# vrrp_groups:
+#   - interface: "ethernet-1/1"
+#     subinterface: 0
+#     group_id: 1
+#     virtual_ip: "192.168.1.1"
+#     priority: 100          # 1-254, higher wins
+#     preempt: true          # Take over if higher priority
+#     preempt_delay: 0       # Delay before preemption (seconds)
+#     accept_mode: true      # Accept packets to virtual IP
+#     advertisement_interval: 1000  # milliseconds (1-40950)
+#     version: 3             # VRRP version (2 or 3)
+#     authentication:        # VRRPv2 only
+#       type: "simple"       # simple or none
+#       key: "vrrp_secret"
+#   - interface: "irb0"
+#     subinterface: 100
+#     group_id: 10
+#     virtual_ip: "10.100.0.1"
+#     priority: 150
+#     preempt: true
+
+vrrp_groups: []
+
+# ============================================================================
+# VRRP IPV6 GROUPS
+# ============================================================================
+
+# VRRP IPv6 groups (VRRPv3 only)
+# vrrp_ipv6_groups:
+#   - interface: "ethernet-1/1"
+#     subinterface: 0
+#     group_id: 1
+#     virtual_ip: "2001:db8::1"
+#     priority: 100
+#     preempt: true
+
+vrrp_ipv6_groups: []
+
+# ============================================================================
+# VRRP DEFAULT VALUES
+# ============================================================================
+
+# Default VRRP version (2 or 3, SR Linux prefers 3)
+vrrp_default_version: 3
+
+# Default priority (1-254, 100 is standard default)
+vrrp_default_priority: 100
+
+# Default preemption setting
+vrrp_default_preempt: true
+
+# Default preempt delay (seconds)
+vrrp_default_preempt_delay: 0
+
+# Default advertisement interval (milliseconds)
+vrrp_default_advertisement_interval: 1000
+
+# Default accept mode (accept packets destined to virtual IP)
+vrrp_default_accept_mode: true
+
+# ============================================================================
+# INTERFACE TRACKING
+# ============================================================================
+
+# Track interfaces to adjust VRRP priority
+# vrrp_interface_tracking:
+#   - vrrp_interface: "ethernet-1/1"
+#     vrrp_subinterface: 0
+#     vrrp_group_id: 1
+#     track_interface: "ethernet-1/49"
+#     priority_decrement: 50   # Reduce priority when tracked interface is down
+
+vrrp_interface_tracking: []
+
+# ============================================================================
+# OPERATIONAL GROUPS (Track Multiple Interfaces)
+# ============================================================================
+
+# Operational groups to track multiple resources
+# vrrp_operational_groups:
+#   - name: "uplinks"
+#     members:
+#       - "ethernet-1/49"
+#       - "ethernet-1/50"
+#     type: "any"  # any = up if any member up, all = up only if all members up
+
+vrrp_operational_groups: []
+
+# ============================================================================
+# NETWORK INSTANCE
+# ============================================================================
+
+# Network instance for VRRP (typically default or specific VRF)
+vrrp_network_instance: "default"
+

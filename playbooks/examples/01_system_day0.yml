@@ -1,0 +1,70 @@
+---
+# 01_system_day0.yml - Day 0 System Configuration
+# Configures basic system settings: NTP, DNS, Logging, AAA
+#
+# Usage:
+#   ansible-playbook 01_system_day0.yml -i inventory/hosts.yml
+
+- name: "Day 0 System Configuration"
+  hosts: all
+  gather_facts: false
+  
+  vars:
+    # NTP Configuration
+    ntp_enabled: true
+    ntp_timezone: "America/New_York"
+    ntp_servers:
+      - address: "0.pool.ntp.org"
+        prefer: true
+      - address: "1.pool.ntp.org"
+    
+    # DNS Configuration
+    dns_enabled: true
+    dns_servers:
+      - "8.8.8.8"
+      - "8.8.4.4"
+    dns_network_instance: "mgmt"
+    
+    # Logging Configuration
+    logging_file_enabled: true
+    logging_buffer_enabled: true
+    logging_buffer_size: 10000
+    logging_syslog_servers: []  # Add your syslog servers here
+    
+    # AAA Configuration
+    aaa_local_users:
+      - username: "netops"
+        password: "NetOps123!"
+        role: "admin"
+      - username: "readonly"
+        password: "ReadOnly123!"
+        role: "admin"  # SR Linux uses admin role, permissions via Linux groups
+
+  tasks:
+    - name: "Configure NTP"
+      import_role:
+        name: chasewoodard93.srlinux.system_ntp
+
+    - name: "Configure DNS"
+      import_role:
+        name: chasewoodard93.srlinux.system_dns
+
+    - name: "Configure Logging"
+      import_role:
+        name: chasewoodard93.srlinux.system_logging
+
+    - name: "Configure AAA"
+      import_role:
+        name: chasewoodard93.srlinux.system_aaa
+
+    - name: "Day 0 Configuration Complete"
+      debug:
+        msg: |
+          ✅ Day 0 System Configuration Complete
+          ──────────────────────────────────────
+          Device: {{ inventory_hostname }}
+          NTP: Configured with {{ ntp_servers | length }} servers
+          DNS: Configured with {{ dns_servers | length }} servers
+          Logging: File={{ logging_file_enabled }}, Buffer={{ logging_buffer_enabled }}
+          AAA: {{ aaa_local_users | length }} users configured
+

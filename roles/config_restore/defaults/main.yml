@@ -1,0 +1,63 @@
+---
+# defaults/main.yml - Default variables for config_restore role
+
+# ============================================================================
+# RESTORE SOURCE CONFIGURATION
+# ============================================================================
+
+# Path to the backup file to restore (REQUIRED - must be set in playbook/vars)
+# restore_backup_file: "/var/backups/srlinux/spine1/spine1_2024-01-15_143022.cfg"
+
+# Alternatively, restore latest backup from a directory
+# restore_from_dir: "/var/backups/srlinux/spine1"
+# restore_latest: true
+
+# ============================================================================
+# RESTORE OPTIONS
+# ============================================================================
+
+# Restore mode:
+#   'merge' - merge with existing config (default, safer)
+#   'replace' - replace entire configuration (dangerous!)
+restore_mode: "merge"
+
+# Create backup before restore (strongly recommended)
+restore_create_backup: true
+
+# Backup directory for pre-restore backup
+restore_backup_dir: "/var/backups/srlinux/pre-restore"
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+# Validate configuration before applying
+restore_validate: true
+
+# Perform dry-run first (show what would change)
+restore_dry_run: false
+
+# Confirm before applying (for interactive use)
+restore_confirm: false
+
+# ============================================================================
+# POST-RESTORE ACTIONS
+# ============================================================================
+
+# Save to startup config after restore
+restore_save_config: true
+
+# Verify connectivity after restore
+restore_verify_connectivity: true
+
+# Rollback timeout in seconds (0 = no automatic rollback)
+# If device becomes unreachable, config can be rolled back
+restore_rollback_timeout: 0
+
+# ============================================================================
+# NOTIFICATIONS
+# ============================================================================
+
+# Show restore summary
+restore_show_summary: true
+

@@ -1,0 +1,76 @@
+---
+# tasks/main.yml - Main tasks for segment_routing role
+
+- name: "Display Segment Routing configuration info"
+  debug:
+    msg: "Configuring Segment Routing ({{ sr_type }}) on {{ inventory_hostname }}"
+  when: sr_enabled | default(true)
+
+# Generate Segment Routing configuration
+- name: "Generate Segment Routing configuration"
+  template:
+    src: segment_routing.j2
+    dest: "/tmp/{{ inventory_hostname }}_segment_routing.cfg"
+  delegate_to: localhost
+  when: sr_enabled | default(true)
+
+- name: "Read Segment Routing configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_segment_routing.cfg"
+  register: sr_config_raw
+  delegate_to: localhost
+  when: sr_enabled | default(true)
+
+- name: "Parse Segment Routing commands"
+  set_fact:
+    sr_commands: "{{ (sr_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: sr_enabled | default(true)
+
+# Apply Segment Routing configuration
+- name: "Apply Segment Routing configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ sr_commands }}"
+  register: sr_result
+  when: 
+    - sr_enabled | default(true)
+    - sr_commands | length > 0
+
+# Verify Segment Routing
+- name: "Verify Segment Routing status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ sr_network_instance }} segment-routing mpls"
+  register: sr_status
+  when: sr_enabled | default(true) and sr_type in ['sr-mpls', 'both']
+
+- name: "Display Segment Routing summary"
+  debug:
+    msg: |
+      ✅ Segment Routing Configuration Complete
+      ──────────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      SR Type: {{ sr_type }}
+      {% if sr_type in ['sr-mpls', 'both'] %}
+      SRGB: {{ sr_mpls_srgb_start }}-{{ sr_mpls_srgb_start + sr_mpls_srgb_range - 1 }}
+      SRLB: {{ sr_mpls_srlb_start }}-{{ sr_mpls_srlb_start + sr_mpls_srlb_range - 1 }}
+      Prefix SIDs: {{ sr_mpls_prefix_sids | length }}
+      TI-LFA: {{ sr_tilfa_enabled | default(true) | ternary('Enabled', 'Disabled') }}
+      {% endif %}
+      {% if sr_type in ['srv6', 'both'] and srv6_locator is defined %}
+      SRv6 Locator: {{ srv6_locator.name }} ({{ srv6_locator.prefix }})
+      {% endif %}
+  when: sr_enabled | default(true)
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_segment_routing.cfg"
+    state: absent
+  delegate_to: localhost
+

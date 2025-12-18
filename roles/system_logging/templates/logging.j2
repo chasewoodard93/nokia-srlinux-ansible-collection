@@ -1,0 +1,24 @@
+{# Template for logging/syslog configuration #}
+
+{# File logging #}
+{% if logging_file_enabled %}
+set / system logging file {{ logging_file_messages.name }} rotate {{ logging_file_messages.rotate }}
+set / system logging file {{ logging_file_messages.name }} size {{ logging_file_messages.size }}
+{% endif %}
+
+{# Buffer logging #}
+{% if logging_buffer_enabled %}
+set / system logging buffer messages size {{ logging_buffer_size }}
+{% endif %}
+
+{# Remote syslog servers #}
+{% for server in logging_syslog_servers %}
+set / system logging remote-server {{ server.address }} network-instance {{ logging_network_instance }}
+{% if server.port is defined %}
+set / system logging remote-server {{ server.address }} transport {{ server.protocol | default('udp') }} port {{ server.port }}
+{% endif %}
+{% if server.facility is defined %}
+set / system logging remote-server {{ server.address }} facility {{ server.facility }}
+{% endif %}
+{% endfor %}
+

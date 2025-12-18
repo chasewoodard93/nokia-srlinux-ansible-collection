@@ -1,0 +1,82 @@
+---
+# defaults/main.yml - Default variables for routing_policy role
+
+# ============================================================================
+# PREFIX LISTS
+# ============================================================================
+
+# IPv4 prefix lists
+# routing_policy_prefix_lists:
+#   - name: "LOOPBACKS"
+#     prefixes:
+#       - prefix: "10.0.0.0/24"
+#         mask_range: "32..32"
+#       - prefix: "10.0.1.0/24"
+#         mask_range: "32..32"
+#   - name: "DEFAULT-ROUTE"
+#     prefixes:
+#       - prefix: "0.0.0.0/0"
+#         mask_range: "exact"
+
+routing_policy_prefix_lists: []
+
+# ============================================================================
+# COMMUNITY LISTS
+# ============================================================================
+
+# BGP community lists
+# routing_policy_community_lists:
+#   - name: "INTERNAL"
+#     members:
+#       - "65000:100"
+#       - "65000:200"
+#   - name: "EXTERNAL"
+#     members:
+#       - "65000:999"
+
+routing_policy_community_lists: []
+
+# ============================================================================
+# AS PATH LISTS
+# ============================================================================
+
+# AS path regular expression lists
+# routing_policy_as_path_lists:
+#   - name: "LOCAL-AS"
+#     expression: "^$"  # locally originated
+#   - name: "CUSTOMER-AS"
+#     expression: "^65001_"
+
+routing_policy_as_path_lists: []
+
+# ============================================================================
+# ROUTE POLICIES
+# ============================================================================
+
+# Route policies (route-maps)
+# routing_policy_policies:
+#   - name: "EXPORT-TO-PEER"
+#     statements:
+#       - sequence: 10
+#         match:
+#           prefix_list: "LOOPBACKS"
+#         action: "accept"
+#         set:
+#           community: "add"
+#           community_list: "INTERNAL"
+#       - sequence: 20
+#         match:
+#           prefix_list: "DEFAULT-ROUTE"
+#         action: "reject"
+#       - sequence: 1000
+#         action: "accept"  # default accept
+
+routing_policy_policies: []
+
+# ============================================================================
+# DEFAULT POLICY
+# ============================================================================
+
+# Default action for undefined policies
+routing_policy_default_action: "reject"
+

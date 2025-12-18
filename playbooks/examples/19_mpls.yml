@@ -1,0 +1,114 @@
+---
+# Example Playbook: MPLS Configuration
+# Configures MPLS with LDP and RSVP-TE
+#
+# Usage:
+#   ansible-playbook 19_mpls.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - MPLS global configuration
+#   - LDP (Label Distribution Protocol)
+#   - RSVP-TE for traffic engineering
+#   - Static LSP configuration
+
+- name: Configure MPLS
+  hosts: srlinux
+  gather_facts: false
+  vars:
+    # MPLS global configuration
+    mpls_config:
+      admin_state: enable
+      # Label ranges
+      static_label_range:
+        start: 1000
+        end: 1999
+      dynamic_label_range:
+        start: 2000
+        end: 1048575
+        
+    # MPLS interfaces
+    mpls_interfaces:
+      - name: ethernet-1/1.0
+        admin_state: enable
+      - name: ethernet-1/2.0
+        admin_state: enable
+      - name: ethernet-1/3.0
+        admin_state: enable
+        
+    # LDP configuration
+    ldp_config:
+      admin_state: enable
+      router_id: 10.0.0.1
+      session:
+        holdtime: 30
+        keepalive_interval: 10
+      interfaces:
+        - name: ethernet-1/1.0
+          admin_state: enable
+        - name: ethernet-1/2.0
+          admin_state: enable
+          
+    # RSVP-TE configuration
+    rsvp_config:
+      admin_state: enable
+      refresh_time: 30
+      interfaces:
+        - name: ethernet-1/1.0
+          admin_state: enable
+          bandwidth_constraint:
+            max_reservable: 10000000  # 10Gbps
+        - name: ethernet-1/2.0
+          admin_state: enable
+          
+    # Static LSPs
+    static_lsps:
+      - name: to-pe2
+        admin_state: enable
+        incoming_label: 1001
+        push_label: 2001
+        next_hop: 10.0.12.2
+        outgoing_interface: ethernet-1/1.0
+        
+      - name: bypass-link
+        admin_state: enable
+        incoming_label: 1002
+        swap_label: 1002
+        next_hop: 10.0.13.2
+        outgoing_interface: ethernet-1/2.0
+
+  tasks:
+    - name: Display MPLS configuration
+      ansible.builtin.debug:
+        msg: |
+          MPLS Configuration:
+          - Interfaces: {{ mpls_interfaces | length }}
+          - LDP: {{ ldp_config.admin_state }}
+          - RSVP-TE: {{ rsvp_config.admin_state }}
+          - Static LSPs: {{ static_lsps | length }}
+
+    - name: Apply MPLS configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.mpls
+      vars:
+        mpls_enabled: true
+        mpls_global_config: "{{ mpls_config }}"
+        mpls_interface_list: "{{ mpls_interfaces }}"
+        mpls_ldp_config: "{{ ldp_config }}"
+        mpls_rsvp_config: "{{ rsvp_config }}"
+        mpls_static_lsps: "{{ static_lsps }}"
+
+    - name: Verify MPLS configuration
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - show network-instance default mpls label-range
+          - show network-instance default protocols ldp neighbor
+          - show network-instance default protocols ldp interface
+      register: mpls_status
+
+    - name: Display MPLS status
+      ansible.builtin.debug:
+        var: mpls_status.stdout_lines
+

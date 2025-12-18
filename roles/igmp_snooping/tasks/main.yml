@@ -1,0 +1,70 @@
+---
+# tasks/main.yml - Main tasks for igmp_snooping role
+
+- name: "Display IGMP snooping configuration info"
+  debug:
+    msg: "Configuring IGMP snooping on {{ inventory_hostname }}"
+
+# Generate IGMP snooping configuration
+- name: "Generate IGMP snooping configuration"
+  template:
+    src: igmp_snooping.j2
+    dest: "/tmp/{{ inventory_hostname }}_igmp_snooping.cfg"
+  delegate_to: localhost
+  when: igmp_snooping_instances | length > 0 or mld_snooping_instances | length > 0
+
+- name: "Read IGMP snooping configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_igmp_snooping.cfg"
+  register: igmp_config_raw
+  delegate_to: localhost
+  when: igmp_snooping_instances | length > 0 or mld_snooping_instances | length > 0
+
+- name: "Parse IGMP snooping commands"
+  set_fact:
+    igmp_commands: "{{ (igmp_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: igmp_snooping_instances | length > 0 or mld_snooping_instances | length > 0
+
+# Apply IGMP snooping configuration
+- name: "Apply IGMP snooping configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ igmp_commands }}"
+  register: igmp_result
+  when: 
+    - igmp_snooping_instances | length > 0 or mld_snooping_instances | length > 0
+    - igmp_commands | length > 0
+
+# Verify IGMP snooping
+- name: "Verify IGMP snooping status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance * protocols igmp-snooping"
+  register: igmp_status
+  when: igmp_snooping_instances | length > 0
+
+- name: "Display IGMP snooping summary"
+  debug:
+    msg: |
+      ✅ IGMP Snooping Configuration Complete
+      ────────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      IGMP Snooping Instances: {{ igmp_snooping_instances | length }}
+      MLD Snooping Instances: {{ mld_snooping_instances | length }}
+      {% for inst in igmp_snooping_instances %}
+      - {{ inst.network_instance }}: v{{ inst.version | default(igmp_default_version) }}, fast-leave={{ inst.fast_leave | default(igmp_fast_leave_enabled) }}
+      {% endfor %}
+  when: igmp_snooping_instances | length > 0 or mld_snooping_instances | length > 0
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_igmp_snooping.cfg"
+    state: absent
+  delegate_to: localhost
+

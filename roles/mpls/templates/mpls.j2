@@ -1,0 +1,91 @@
+{# MPLS configuration template for SR Linux #}
+
+{% if mpls_enabled | default(true) %}
+{# ============================================================================ #}
+{# MPLS Global Configuration                                                   #}
+{# ============================================================================ #}
+set / network-instance {{ mpls_network_instance }} mpls admin-state {{ mpls_admin_state }}
+
+{# TTL propagation #}
+set / network-instance {{ mpls_network_instance }} mpls ttl-propagate {{ mpls_ttl_propagation | default('uniform') }}
+
+{# ============================================================================ #}
+{# MPLS Interfaces                                                             #}
+{# ============================================================================ #}
+{% for intf in mpls_interfaces %}
+set / network-instance {{ mpls_network_instance }} mpls interface {{ intf.name }} admin-state {{ intf.admin_state | default('enable') }}
+{% endfor %}
+
+{# ============================================================================ #}
+{# Label Ranges                                                                #}
+{# ============================================================================ #}
+set / network-instance {{ mpls_network_instance }} mpls static-label-block start {{ mpls_static_label_start }} end {{ mpls_static_label_end }}
+set / network-instance {{ mpls_network_instance }} mpls dynamic-label-block start {{ mpls_dynamic_label_start }} end {{ mpls_dynamic_label_end }}
+
+{# ============================================================================ #}
+{# LDP Configuration                                                           #}
+{# ============================================================================ #}
+{% if mpls_ldp_enabled | default(false) %}
+set / network-instance {{ mpls_network_instance }} protocols ldp admin-state enable
+
+{% if mpls_ldp_router_id is defined %}
+set / network-instance {{ mpls_network_instance }} protocols ldp router-id {{ mpls_ldp_router_id }}
+{% endif %}
+
+{# LDP interfaces #}
+{% for intf in mpls_ldp_interfaces %}
+set / network-instance {{ mpls_network_instance }} protocols ldp interface {{ intf.name }} admin-state enable
+{% if intf.hello_interval is defined %}
+set / network-instance {{ mpls_network_instance }} protocols ldp interface {{ intf.name }} hello-interval {{ intf.hello_interval }}
+{% endif %}
+{% if intf.hold_time is defined %}
+set / network-instance {{ mpls_network_instance }} protocols ldp interface {{ intf.name }} hold-time {{ intf.hold_time }}
+{% endif %}
+{% endfor %}
+
+{# LDP session parameters #}
+set / network-instance {{ mpls_network_instance }} protocols ldp session-keepalive-interval {{ mpls_ldp_keepalive_interval }}
+set / network-instance {{ mpls_network_instance }} protocols ldp session-keepalive-timeout {{ mpls_ldp_keepalive_timeout }}
+{% endif %}
+
+{# ============================================================================ #}
+{# RSVP-TE Configuration                                                       #}
+{# ============================================================================ #}
+{% if mpls_rsvp_enabled | default(false) %}
+set / network-instance {{ mpls_network_instance }} protocols rsvp admin-state enable
+
+{# RSVP interfaces #}
+{% for intf in mpls_rsvp_interfaces %}
+set / network-instance {{ mpls_network_instance }} protocols rsvp interface {{ intf.name }} admin-state {{ intf.admin_state | default('enable') }}
+{% if intf.bandwidth is defined %}
+set / network-instance {{ mpls_network_instance }} protocols rsvp interface {{ intf.name }} bandwidth {{ intf.bandwidth }}
+{% endif %}
+{% endfor %}
+
+{# RSVP timers #}
+set / network-instance {{ mpls_network_instance }} protocols rsvp refresh-interval {{ mpls_rsvp_refresh_interval }}
+set / network-instance {{ mpls_network_instance }} protocols rsvp hello-interval {{ mpls_rsvp_hello_interval }}
+{% endif %}
+
+{# ============================================================================ #}
+{# Static LSPs                                                                 #}
+{# ============================================================================ #}
+{% for lsp in mpls_static_lsps %}
+set / network-instance {{ mpls_network_instance }} mpls static-lsp {{ lsp.name }} admin-state enable
+set / network-instance {{ mpls_network_instance }} mpls static-lsp {{ lsp.name }} type {{ lsp.type }}
+{% if lsp.in_label is defined %}
+set / network-instance {{ mpls_network_instance }} mpls static-lsp {{ lsp.name }} in-label {{ lsp.in_label }}
+{% endif %}
+{% if lsp.out_label is defined %}
+set / network-instance {{ mpls_network_instance }} mpls static-lsp {{ lsp.name }} out-label {{ lsp.out_label }}
+{% endif %}
+{% if lsp.next_hop is defined %}
+set / network-instance {{ mpls_network_instance }} mpls static-lsp {{ lsp.name }} next-hop {{ lsp.next_hop }}
+{% endif %}
+{% if lsp.out_interface is defined %}
+set / network-instance {{ mpls_network_instance }} mpls static-lsp {{ lsp.name }} out-interface {{ lsp.out_interface }}
+{% endif %}
+{% endfor %}
+
+{% endif %}
+

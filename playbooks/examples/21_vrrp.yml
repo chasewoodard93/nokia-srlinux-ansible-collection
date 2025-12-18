@@ -1,0 +1,89 @@
+---
+# Example Playbook: VRRP Configuration
+# Configures Virtual Router Redundancy Protocol for gateway redundancy
+#
+# Usage:
+#   ansible-playbook 21_vrrp.yml -i inventory/hosts.yml
+#
+# This playbook demonstrates:
+#   - VRRP group configuration
+#   - Priority and preemption settings
+#   - Interface tracking
+#   - Multiple VRRP groups for load balancing
+
+- name: Configure VRRP
+  hosts: leaf
+  gather_facts: false
+  vars:
+    # VRRP groups
+    vrrp_groups:
+      # Primary gateway for VLAN 100
+      - interface: ethernet-1/10.100
+        vrid: 1
+        admin_state: enable
+        priority: 150
+        preempt: true
+        preempt_delay: 60
+        virtual_addresses:
+          - 10.100.1.1
+        authentication:
+          type: simple
+          key: "VRRP_K3y"
+        track_interfaces:
+          - name: ethernet-1/1
+            priority_decrement: 50
+          - name: ethernet-1/2
+            priority_decrement: 50
+            
+      # Backup gateway for VLAN 100 (load balancing)
+      - interface: ethernet-1/10.100
+        vrid: 2
+        admin_state: enable
+        priority: 100
+        preempt: true
+        virtual_addresses:
+          - 10.100.1.2
+          
+      # Primary gateway for VLAN 200
+      - interface: ethernet-1/10.200
+        vrid: 10
+        admin_state: enable
+        priority: 150
+        preempt: true
+        preempt_delay: 30
+        virtual_addresses:
+          - 10.200.1.1
+        advertisement_interval: 1000
+
+  tasks:
+    - name: Display VRRP configuration
+      ansible.builtin.debug:
+        msg: |
+          Configuring {{ vrrp_groups | length }} VRRP groups:
+          {% for vg in vrrp_groups %}
+          - VRID {{ vg.vrid }} on {{ vg.interface }}
+            VIP: {{ vg.virtual_addresses | join(', ') }}
+            Priority: {{ vg.priority }}
+          {% endfor %}
+
+    - name: Apply VRRP configuration
+      ansible.builtin.include_role:
+        name: chasewoodard93.srlinux.vrrp
+      vars:
+        vrrp_enabled: true
+        vrrp_group_list: "{{ vrrp_groups }}"
+
+    - name: Verify VRRP configuration
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - show network-instance default protocols vrrp
+          - show network-instance default protocols vrrp vrrp-group *
+      register: vrrp_status
+
+    - name: Display VRRP status
+      ansible.builtin.debug:
+        var: vrrp_status.stdout_lines
+

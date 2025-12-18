@@ -1,0 +1,15 @@
+{# Template for TACACS+ server configuration #}
+{% if aaa_tacacs_enabled and aaa_tacacs_servers | length > 0 %}
+set / system aaa server-group tacacs admin-state enable
+{% for server in aaa_tacacs_servers %}
+set / system aaa server-group tacacs server {{ server.address }} tacacs admin-state enable
+set / system aaa server-group tacacs server {{ server.address }} tacacs secret-key {{ server.secret }}
+{% if server.port is defined %}
+set / system aaa server-group tacacs server {{ server.address }} tacacs port {{ server.port }}
+{% endif %}
+{% if server.timeout is defined %}
+set / system aaa server-group tacacs server {{ server.address }} tacacs timeout {{ server.timeout }}
+{% endif %}
+{% endfor %}
+{% endif %}
+

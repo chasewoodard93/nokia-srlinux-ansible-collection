@@ -1,0 +1,97 @@
+---
+# 09_evpn_fabric.yml - Complete EVPN/VXLAN Fabric Deployment
+# Deploys full DC fabric with BGP underlay, EVPN overlay, and services
+#
+# Usage:
+#   ansible-playbook 09_evpn_fabric.yml -i inventory/hosts.yml
+
+- name: "Deploy EVPN/VXLAN Fabric"
+  hosts: all
+  gather_facts: false
+  
+  vars:
+    # ─────────────────────────────────────────────────────────
+    # Fabric Design Parameters
+    # ─────────────────────────────────────────────────────────
+    fabric_name: "dc1"
+    fabric_asn_base: 65000
+    fabric_loopback_prefix: "10.0.0.0/24"
+    fabric_p2p_prefix: "10.1.0.0/16"
+    
+    # BGP configuration will be calculated by fabric_facts role
+    
+    # ─────────────────────────────────────────────────────────
+    # L2 Services (MAC-VRF)
+    # ─────────────────────────────────────────────────────────
+    l2_services:
+      - name: "VLAN100"
+        vni: 10100
+        vlan_id: 100
+        interfaces:
+          - "ethernet-1/10.100"
+
+    # ─────────────────────────────────────────────────────────
+    # L3 Services (IP-VRF)
+    # ─────────────────────────────────────────────────────────
+    l3_services:
+      - name: "TENANT-A"
+        vni: 50001
+        rd: "auto"
+        rt_import: ["65000:50001"]
+        rt_export: ["65000:50001"]
+        irb_interfaces:
+          - name: "irb0"
+            subinterface: 100
+            ipv4_address: "192.168.100.1/24"
+            mac_vrf: "VLAN100"
+
+  tasks:
+    - name: "Phase 1: Gather Fabric Facts"
+      import_role:
+        name: chasewoodard93.srlinux.fabric_facts
+
+    - name: "Phase 2: Base Configuration"
+      import_role:
+        name: chasewoodard93.srlinux.base_config
+
+    - name: "Phase 3: BGP Underlay"
+      import_role:
+        name: chasewoodard93.srlinux.bgp_underlay
+
+    - name: "Phase 4: EVPN Overlay"
+      import_role:
+        name: chasewoodard93.srlinux.evpn_overlay
+
+    - name: "Phase 5: L2 Services"
+      import_role:
+        name: chasewoodard93.srlinux.l2_services
+      when: l2_services | length > 0
+
+    - name: "Phase 6: L3 Services"
+      import_role:
+        name: chasewoodard93.srlinux.l3_services
+      when: l3_services | length > 0
+
+    - name: "Phase 7: Health Check"
+      import_role:
+        name: chasewoodard93.srlinux.health_check
+
+    - name: "EVPN Fabric Deployment Complete"
+      debug:
+        msg: |
+          ═══════════════════════════════════════════════════════════
+          ✅ EVPN/VXLAN FABRIC DEPLOYMENT COMPLETE
+          ═══════════════════════════════════════════════════════════
+          
+          Fabric: {{ fabric_name }}
+          Device: {{ inventory_hostname }}
+          
+          Components Deployed:
+            ✓ Base Configuration
+            ✓ BGP Underlay (eBGP)
+            ✓ EVPN Overlay (iBGP)
+            ✓ L2 Services: {{ l2_services | length }}
+            ✓ L3 Services: {{ l3_services | length }}
+          
+          ═══════════════════════════════════════════════════════════
+

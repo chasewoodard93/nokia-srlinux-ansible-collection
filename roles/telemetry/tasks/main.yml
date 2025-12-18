@@ -1,0 +1,75 @@
+---
+# tasks/main.yml - Main tasks for telemetry role
+
+- name: "Display telemetry configuration info"
+  debug:
+    msg: "Configuring telemetry/gNMI on {{ inventory_hostname }}"
+
+# Generate telemetry configuration
+- name: "Generate telemetry configuration"
+  template:
+    src: telemetry.j2
+    dest: "/tmp/{{ inventory_hostname }}_telemetry.cfg"
+  delegate_to: localhost
+
+- name: "Read telemetry configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_telemetry.cfg"
+  register: telemetry_config_raw
+  delegate_to: localhost
+
+- name: "Parse telemetry commands"
+  set_fact:
+    telemetry_commands: "{{ (telemetry_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+
+# Apply telemetry configuration
+- name: "Apply telemetry configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ telemetry_commands }}"
+  register: telemetry_result
+  when: telemetry_commands | length > 0
+
+# Verify telemetry configuration
+- name: "Verify gNMI server status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system gnmi-server"
+  register: gnmi_status
+  when: gnmi_enabled | default(true)
+
+- name: "Verify gRPC server status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system grpc-server"
+  register: grpc_status
+  when: grpc_enabled | default(true)
+
+- name: "Display telemetry summary"
+  debug:
+    msg: |
+      ✅ Telemetry Configuration Complete
+      ────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      gNMI Server: {{ gnmi_enabled | default(true) | ternary('Enabled', 'Disabled') }}
+      gRPC Server: {{ grpc_enabled | default(true) | ternary('Enabled', 'Disabled') }}
+      gRPC Port: {{ grpc_port | default(57400) }}
+      JSON-RPC: {{ json_rpc_enabled | default(true) | ternary('Enabled', 'Disabled') }}
+      Network Instance: {{ gnmi_network_instance | default('mgmt') }}
+      Subscriptions: {{ telemetry_subscriptions | length }}
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_telemetry.cfg"
+    state: absent
+  delegate_to: localhost
+

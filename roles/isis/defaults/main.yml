@@ -1,0 +1,126 @@
+---
+# defaults/main.yml - Default variables for isis role
+# IS-IS routing protocol configuration
+
+# ============================================================================
+# IS-IS INSTANCE CONFIGURATION
+# ============================================================================
+
+# Network instance for IS-IS
+isis_network_instance: "default"
+
+# IS-IS instance name
+isis_instance_name: "1"
+
+# IS-IS admin state
+isis_admin_state: "enable"
+
+# IS-IS NET (Network Entity Title)
+# Format: Area.SystemID.NSEL (e.g., 49.0001.0010.0000.0001.00)
+# isis_net: "49.0001.0010.0000.0001.00"
+
+# IS-IS level type: level-1, level-2, level-1-2
+isis_level_type: "level-2"
+
+# ============================================================================
+# IS-IS AREA CONFIGURATION
+# ============================================================================
+
+# Area address (first 1-13 bytes of NET)
+# isis_area_address: "49.0001"
+
+# ============================================================================
+# IS-IS INTERFACES
+# ============================================================================
+
+# IS-IS interfaces
+# isis_interfaces:
+#   - name: "ethernet-1/1.0"
+#     circuit_type: "point-to-point"  # point-to-point, broadcast
+#     level: "level-2"                # level-1, level-2, level-1-2
+#     metric: 10
+#     passive: false
+#     bfd: true
+#     hello_interval: 10
+#     hello_multiplier: 3
+#   - name: "system0.0"
+#     passive: true
+
+isis_interfaces: []
+
+# ============================================================================
+# IS-IS TIMERS
+# ============================================================================
+
+# LSP generation interval (milliseconds)
+isis_lsp_gen_interval_initial: 50
+isis_lsp_gen_interval_second: 100
+isis_lsp_gen_interval_max: 5000
+
+# SPF calculation interval (milliseconds)
+isis_spf_interval_initial: 50
+isis_spf_interval_second: 100
+isis_spf_interval_max: 5000
+
+# LSP lifetime (seconds)
+isis_lsp_lifetime: 1200
+
+# LSP refresh interval (seconds)
+isis_lsp_refresh: 600
+
+# ============================================================================
+# IS-IS AUTHENTICATION
+# ============================================================================
+
+# Enable IS-IS authentication
+isis_auth_enabled: false
+
+# Authentication type: md5, simple
+isis_auth_type: "md5"
+
+# Authentication key
+# isis_auth_key: "isis_secret"
+
+# ============================================================================
+# IS-IS OVERLOAD
+# ============================================================================
+
+# Set overload bit
+isis_overload_bit: false
+
+# Overload on startup (seconds, 0 = disabled)
+isis_overload_on_startup: 0
+
+# ============================================================================
+# IS-IS SEGMENT ROUTING (IF SR ENABLED)
+# ============================================================================
+
+# Enable segment routing for IS-IS
+isis_segment_routing_enabled: false
+
+# SRGB (Segment Routing Global Block)
+# isis_sr_srgb_start: 16000
+# isis_sr_srgb_range: 8000
+
+# ============================================================================
+# IS-IS DEFAULTS
+# ============================================================================
+
+# Default interface metric
+isis_default_metric: 10
+
+# Default hello interval
+isis_default_hello_interval: 10
+
+# Default hello multiplier
+isis_default_hello_multiplier: 3
+
+# Enable wide metrics
+isis_wide_metrics: true
+
+# Enable IPv4 routing
+isis_ipv4_enabled: true
+
+# Enable IPv6 routing
+isis_ipv6_enabled: false
+

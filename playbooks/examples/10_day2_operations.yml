@@ -1,0 +1,112 @@
+---
+# 10_day2_operations.yml - Day 2 Operations Workflow
+# Complete operational tasks: backup, health check, gather facts
+#
+# Usage:
+#   # Full Day 2 workflow
+#   ansible-playbook 10_day2_operations.yml -i inventory/hosts.yml
+#
+#   # Just backup
+#   ansible-playbook 10_day2_operations.yml -i inventory/hosts.yml --tags backup
+#
+#   # Just health check
+#   ansible-playbook 10_day2_operations.yml -i inventory/hosts.yml --tags health
+
+- name: "Day 2 Operations - Pre-Checks"
+  hosts: all
+  gather_facts: false
+  tags: [always]
+  
+  tasks:
+    - name: "Verify connectivity"
+      chasewoodard93.srlinux.srlinux_command:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        commands:
+          - "show system information"
+      register: system_info
+
+    - name: "Device accessible"
+      debug:
+        msg: "✓ {{ inventory_hostname }} is accessible"
+
+- name: "Day 2 Operations - Configuration Backup"
+  hosts: all
+  gather_facts: false
+  tags: [backup, full]
+  
+  vars:
+    backup_base_dir: "./backups/daily"
+    backup_format: "json"
+
+  tasks:
+    - name: "Run backup"
+      import_role:
+        name: chasewoodard93.srlinux.config_backup
+
+- name: "Day 2 Operations - Health Check"
+  hosts: all
+  gather_facts: false
+  tags: [health, full]
+  
+  vars:
+    health_check_cpu_threshold: 80
+    health_check_memory_threshold: 80
+    health_check_disk_threshold: 85
+
+  tasks:
+    - name: "Run health check"
+      import_role:
+        name: chasewoodard93.srlinux.health_check
+
+- name: "Day 2 Operations - Gather Facts"
+  hosts: all
+  gather_facts: false
+  tags: [facts, full]
+  
+  tasks:
+    - name: "Gather device facts"
+      chasewoodard93.srlinux.srlinux_facts:
+        host: "{{ ansible_host }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        gather_subset:
+          - system
+          - interfaces
+          - routing
+      register: device_facts
+
+    - name: "Display facts summary"
+      debug:
+        msg: |
+          📊 Device Facts: {{ inventory_hostname }}
+          ─────────────────────────────────────────
+          Hostname: {{ device_facts.ansible_facts.srlinux_system.hostname | default('N/A') }}
+          Version: {{ device_facts.ansible_facts.srlinux_system.version | default('N/A') }}
+          Uptime: {{ device_facts.ansible_facts.srlinux_system.uptime | default('N/A') }}
+
+- name: "Day 2 Operations - Summary Report"
+  hosts: localhost
+  gather_facts: false
+  tags: [always]
+  
+  tasks:
+    - name: "Operations Summary"
+      debug:
+        msg: |
+          ═══════════════════════════════════════════════════════════
+          ✅ DAY 2 OPERATIONS COMPLETE
+          ═══════════════════════════════════════════════════════════
+          
+          Timestamp: {{ lookup('pipe', 'date +%Y-%m-%d_%H:%M:%S') }}
+          Devices Processed: {{ groups['all'] | length }}
+          
+          Operations Performed:
+            ✓ Connectivity Check
+            ✓ Configuration Backup
+            ✓ Health Check
+            ✓ Facts Gathering
+          
+          ═══════════════════════════════════════════════════════════
+

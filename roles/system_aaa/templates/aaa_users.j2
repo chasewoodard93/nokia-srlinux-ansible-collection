@@ -1,0 +1,8 @@
+{# Template for local user configuration #}
+{% for user in aaa_users %}
+set / system aaa authentication user {{ user.name }} password {{ user.password }}
+{% if user.role is defined %}
+set / system aaa authentication user {{ user.name }} role {{ user.role }}
+{% endif %}
+{% endfor %}
+

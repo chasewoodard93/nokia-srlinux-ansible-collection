@@ -1,0 +1,36 @@
+{# Template for BFD configuration #}
+
+{# BFD subinterface configuration #}
+{% for bfd in bfd_subinterfaces %}
+set / bfd subinterface {{ bfd.interface }} admin-state {{ bfd.admin_state | default('enable') }}
+set / bfd subinterface {{ bfd.interface }} desired-minimum-transmit-interval {{ bfd.desired_minimum_transmit_interval | default(bfd_default_tx_interval) }}
+set / bfd subinterface {{ bfd.interface }} required-minimum-receive {{ bfd.required_minimum_receive | default(bfd_default_rx_interval) }}
+set / bfd subinterface {{ bfd.interface }} detection-multiplier {{ bfd.detection_multiplier | default(bfd_default_detection_multiplier) }}
+{% if bfd.minimum_echo_receive_interval is defined %}
+set / bfd subinterface {{ bfd.interface }} minimum-echo-receive-interval {{ bfd.minimum_echo_receive_interval }}
+{% endif %}
+{% endfor %}
+
+{# BFD for BGP neighbors #}
+{% for bgp_bfd in bfd_bgp %}
+{% if bgp_bfd.enable | default(true) %}
+set / network-instance {{ bgp_bfd.network_instance }} protocols bgp neighbor {{ bgp_bfd.neighbor }} failure-detection enable-bfd true
+set / network-instance {{ bgp_bfd.network_instance }} protocols bgp neighbor {{ bgp_bfd.neighbor }} failure-detection fast-failover true
+{% endif %}
+{% endfor %}
+
+{# BFD for OSPF interfaces #}
+{% for ospf_bfd in bfd_ospf %}
+{% if ospf_bfd.enable | default(true) %}
+set / network-instance {{ ospf_bfd.network_instance }} protocols ospf instance {{ ospf_bfd.instance_id | default(0) }} area {{ ospf_bfd.area }} interface {{ ospf_bfd.interface }} failure-detection enable-bfd true
+{% endif %}
+{% endfor %}
+
+{# Micro-BFD for LAG #}
+{% for lag_bfd in bfd_micro_lag %}
+set / bfd micro-bfd-sessions lag-interface {{ lag_bfd.lag }} admin-state {{ lag_bfd.admin_state | default('enable') }}
+set / bfd micro-bfd-sessions lag-interface {{ lag_bfd.lag }} desired-minimum-transmit-interval {{ lag_bfd.desired_minimum_transmit_interval | default(bfd_default_tx_interval) }}
+set / bfd micro-bfd-sessions lag-interface {{ lag_bfd.lag }} required-minimum-receive {{ lag_bfd.required_minimum_receive | default(bfd_default_rx_interval) }}
+set / bfd micro-bfd-sessions lag-interface {{ lag_bfd.lag }} detection-multiplier {{ lag_bfd.detection_multiplier | default(bfd_default_detection_multiplier) }}
+{% endfor %}
+

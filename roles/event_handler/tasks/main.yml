@@ -1,0 +1,92 @@
+---
+# tasks/main.yml - Main tasks for event_handler role
+
+- name: "Display event handler configuration info"
+  debug:
+    msg: "Configuring event handlers on {{ inventory_hostname }}"
+  when: event_handlers | length > 0
+
+# Deploy event handler scripts with inline content
+- name: "Deploy inline event handler scripts"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "bash cat > {{ event_handler_script_dir }}/{{ item.name }}.py << 'EOF'\n{{ item.upython_script }}\nEOF"
+  loop: "{{ event_handlers | selectattr('upython_script', 'defined') | list }}"
+  when: event_handlers | length > 0
+
+# Deploy additional script templates
+- name: "Deploy event handler script templates"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "bash cat > {{ event_handler_script_dir }}/{{ item.name }} << 'EOF'\n{{ item.content }}\nEOF"
+  loop: "{{ event_handler_scripts }}"
+  when: event_handler_scripts | length > 0
+
+# Generate event handler configuration
+- name: "Generate event handler configuration"
+  template:
+    src: event_handler.j2
+    dest: "/tmp/{{ inventory_hostname }}_event_handler.cfg"
+  delegate_to: localhost
+  when: event_handlers | length > 0
+
+- name: "Read event handler configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_event_handler.cfg"
+  register: eh_config_raw
+  delegate_to: localhost
+  when: event_handlers | length > 0
+
+- name: "Parse event handler commands"
+  set_fact:
+    eh_commands: "{{ (eh_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: event_handlers | length > 0
+
+# Apply event handler configuration
+- name: "Apply event handler configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ eh_commands }}"
+  register: eh_result
+  when: 
+    - event_handlers | length > 0
+    - eh_commands | length > 0
+
+# Verify event handlers
+- name: "Verify event handler status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system event-handler instance"
+  register: eh_status
+  when: event_handlers | length > 0
+
+- name: "Display event handler summary"
+  debug:
+    msg: |
+      ✅ Event Handler Configuration Complete
+      ────────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Event Handlers: {{ event_handlers | length }}
+      {% for handler in event_handlers %}
+      - {{ handler.name }}: {{ handler.paths | length }} paths monitored
+      {% endfor %}
+  when: event_handlers | length > 0
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_event_handler.cfg"
+    state: absent
+  delegate_to: localhost
+

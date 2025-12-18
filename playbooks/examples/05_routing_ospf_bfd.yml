@@ -1,0 +1,83 @@
+---
+# 05_routing_ospf_bfd.yml - OSPF and BFD Configuration
+#
+# Usage:
+#   ansible-playbook 05_routing_ospf_bfd.yml -i inventory/hosts.yml
+
+- name: "OSPF and BFD Configuration"
+  hosts: all
+  gather_facts: false
+  
+  vars:
+    # ─────────────────────────────────────────────────────────
+    # OSPF Configuration
+    # ─────────────────────────────────────────────────────────
+    ospf_instances:
+      - network_instance: "default"
+        instance_id: 0
+        router_id: "{{ loopback_ip | default('10.0.0.' + inventory_hostname[-1]) }}"
+        admin_state: "enable"
+        version: "ospf-v2"
+        reference_bandwidth: 100000
+        areas:
+          - area_id: "0.0.0.0"
+            type: "normal"
+            interfaces:
+              - name: "system0.0"
+                passive: true
+              - name: "ethernet-1/1.0"
+                passive: false
+                interface_type: "point-to-point"
+                hello_interval: 10
+                dead_interval: 40
+              - name: "ethernet-1/2.0"
+                passive: false
+                interface_type: "point-to-point"
+
+    # ─────────────────────────────────────────────────────────
+    # BFD Configuration
+    # ─────────────────────────────────────────────────────────
+    bfd_enabled: true
+    bfd_default_tx_interval: 100000  # 100ms
+    bfd_default_rx_interval: 100000
+    bfd_default_detection_multiplier: 3
+
+    bfd_subinterfaces:
+      - interface: "ethernet-1/1.0"
+        admin_state: "enable"
+      - interface: "ethernet-1/2.0"
+        admin_state: "enable"
+
+    # Enable BFD for OSPF
+    bfd_ospf:
+      - network_instance: "default"
+        instance_id: 0
+        area: "0.0.0.0"
+        interface: "ethernet-1/1.0"
+        enable: true
+      - network_instance: "default"
+        instance_id: 0
+        area: "0.0.0.0"
+        interface: "ethernet-1/2.0"
+        enable: true
+
+  tasks:
+    - name: "Configure BFD"
+      import_role:
+        name: chasewoodard93.srlinux.bfd
+
+    - name: "Configure OSPF"
+      import_role:
+        name: chasewoodard93.srlinux.ospf
+
+    - name: "OSPF/BFD Configuration Complete"
+      debug:
+        msg: |
+          ✅ OSPF/BFD Configuration Complete
+          ───────────────────────────────────
+          Device: {{ inventory_hostname }}
+          OSPF Instances: {{ ospf_instances | length }}
+          OSPF Areas: {{ ospf_instances | map(attribute='areas') | flatten | length }}
+          BFD Interfaces: {{ bfd_subinterfaces | length }}
+          BFD for OSPF: {{ bfd_ospf | length }} interfaces
+

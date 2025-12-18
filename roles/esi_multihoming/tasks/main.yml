@@ -1,0 +1,86 @@
+---
+# tasks/main.yml - Main tasks for esi_multihoming role
+
+- name: "Display ESI multi-homing configuration info"
+  debug:
+    msg: "Configuring EVPN Multi-Homing (ESI) on {{ inventory_hostname }}"
+
+# Generate ESI configuration
+- name: "Generate ESI multi-homing configuration"
+  template:
+    src: esi.j2
+    dest: "/tmp/{{ inventory_hostname }}_esi.cfg"
+  delegate_to: localhost
+  when: ethernet_segments | length > 0
+
+- name: "Read ESI configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_esi.cfg"
+  register: esi_config_raw
+  delegate_to: localhost
+  when: ethernet_segments | length > 0
+
+- name: "Parse ESI commands"
+  set_fact:
+    esi_commands: "{{ (esi_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: ethernet_segments | length > 0
+
+# Apply ESI configuration
+- name: "Apply ESI multi-homing configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ esi_commands }}"
+  register: esi_result
+  when: 
+    - ethernet_segments | length > 0
+    - esi_commands | length > 0
+
+# Verify Ethernet Segments
+- name: "Verify Ethernet Segment status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system network-instance ethernet-segments"
+  register: es_status
+  when: ethernet_segments | length > 0
+
+- name: "Display Ethernet Segment status"
+  debug:
+    msg: "{{ es_status.stdout_lines[0] | default('No ES configured') }}"
+  when: ethernet_segments | length > 0
+
+# Verify DF Election
+- name: "Verify DF election status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system network-instance ethernet-segments designated-forwarder"
+  register: df_status
+  when: ethernet_segments | length > 0
+
+- name: "Display ESI summary"
+  debug:
+    msg: |
+      ✅ ESI Multi-Homing Configuration Complete
+      ───────────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Ethernet Segments: {{ ethernet_segments | length }}
+      {% for es in ethernet_segments %}
+      - {{ es.name }}: {{ es.esi }} ({{ es.multi_homing_mode | default('all-active') }})
+      {% endfor %}
+  when: ethernet_segments | length > 0
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_esi.cfg"
+    state: absent
+  delegate_to: localhost
+  when: ethernet_segments | length > 0
+

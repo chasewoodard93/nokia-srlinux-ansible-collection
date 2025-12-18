@@ -1,0 +1,126 @@
+---
+# defaults/main.yml - Default variables for ssh_management role
+# SSH server hardening and configuration
+
+# ============================================================================
+# SSH SERVER SETTINGS
+# ============================================================================
+
+# Enable SSH server
+ssh_enabled: true
+
+# SSH admin state
+ssh_admin_state: "enable"
+
+# SSH network instance
+ssh_network_instance: "mgmt"
+
+# SSH port (default 22)
+ssh_port: 22
+
+# ============================================================================
+# SSH AUTHENTICATION
+# ============================================================================
+
+# Allow password authentication
+ssh_password_auth: true
+
+# Allow public key authentication
+ssh_pubkey_auth: true
+
+# ============================================================================
+# SSH SESSION LIMITS
+# ============================================================================
+
+# Maximum concurrent SSH sessions
+ssh_max_sessions: 20
+
+# Session idle timeout (seconds, 0 = no timeout)
+ssh_idle_timeout: 7200
+
+# ============================================================================
+# SSH ACCESS CONTROL
+# ============================================================================
+
+# Allowed source networks for SSH
+# ssh_allowed_networks:
+#   - "10.0.0.0/8"
+#   - "172.16.0.0/12"
+#   - "192.168.0.0/16"
+
+ssh_allowed_networks: []
+
+# ============================================================================
+# SSH CRYPTOGRAPHIC ALGORITHMS
+# ============================================================================
+
+# Key exchange algorithms (modern, secure options)
+ssh_kex_algorithms:
+  - "curve25519-sha256"
+  - "curve25519-sha256@libssh.org"
+  - "ecdh-sha2-nistp256"
+  - "ecdh-sha2-nistp384"
+  - "ecdh-sha2-nistp521"
+  - "diffie-hellman-group16-sha512"
+  - "diffie-hellman-group18-sha512"
+
+# Ciphers (modern, secure options)
+ssh_ciphers:
+  - "chacha20-poly1305@openssh.com"
+  - "aes256-gcm@openssh.com"
+  - "aes128-gcm@openssh.com"
+  - "aes256-ctr"
+  - "aes192-ctr"
+  - "aes128-ctr"
+
+# MAC algorithms (modern, secure options)
+ssh_macs:
+  - "hmac-sha2-512-etm@openssh.com"
+  - "hmac-sha2-256-etm@openssh.com"
+  - "hmac-sha2-512"
+  - "hmac-sha2-256"
+
+# ============================================================================
+# SSH HOST KEYS
+# ============================================================================
+
+# Generate new host keys
+ssh_regenerate_host_keys: false
+
+# Host key types to use
+ssh_host_key_types:
+  - "rsa"
+  - "ecdsa"
+  - "ed25519"
+
+# RSA key size (bits)
+ssh_rsa_key_size: 4096
+
+# ============================================================================
+# SSH AUTHORIZED KEYS
+# ============================================================================
+
+# SSH authorized keys for users
+# ssh_authorized_keys:
+#   - user: "admin"
+#     keys:
+#       - "ssh-rsa AAAA... user@host"
+#       - "ssh-ed25519 AAAA... user2@host"
+#   - user: "operator"
+#     keys:
+#       - "ssh-rsa AAAA... operator@host"
+
+ssh_authorized_keys: []
+
+# ============================================================================
+# SSH BANNER
+# ============================================================================
+
+# SSH login banner
+ssh_banner_enabled: true
+ssh_banner_message: |
+  **************************************************************************
+  *                         AUTHORIZED ACCESS ONLY                          *
+  *  This system is for authorized users only. All activities are logged.  *
+  **************************************************************************
+

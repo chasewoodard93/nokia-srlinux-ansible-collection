@@ -1,0 +1,72 @@
+---
+# tasks/main.yml - Main tasks for pim role
+
+- name: "Display PIM configuration info"
+  debug:
+    msg: "Configuring PIM on {{ inventory_hostname }}"
+  when: pim_interfaces | length > 0 or pim_static_rp | length > 0
+
+# Generate PIM configuration
+- name: "Generate PIM configuration"
+  template:
+    src: pim.j2
+    dest: "/tmp/{{ inventory_hostname }}_pim.cfg"
+  delegate_to: localhost
+  when: pim_interfaces | length > 0 or pim_static_rp | length > 0
+
+- name: "Read PIM configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_pim.cfg"
+  register: pim_config_raw
+  delegate_to: localhost
+  when: pim_interfaces | length > 0 or pim_static_rp | length > 0
+
+- name: "Parse PIM commands"
+  set_fact:
+    pim_commands: "{{ (pim_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: pim_interfaces | length > 0 or pim_static_rp | length > 0
+
+# Apply PIM configuration
+- name: "Apply PIM configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ pim_commands }}"
+  register: pim_result
+  when: 
+    - pim_interfaces | length > 0 or pim_static_rp | length > 0
+    - pim_commands | length > 0
+
+# Verify PIM neighbors
+- name: "Verify PIM neighbors"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show network-instance {{ pim_network_instance }} protocols pim neighbor"
+  register: pim_neighbors
+  when: pim_interfaces | length > 0
+
+- name: "Display PIM summary"
+  debug:
+    msg: |
+      ✅ PIM Configuration Complete
+      ──────────────────────────────
+      Device: {{ inventory_hostname }}
+      Network Instance: {{ pim_network_instance }}
+      PIM Interfaces: {{ pim_interfaces | length }}
+      Static RPs: {{ pim_static_rp | length }}
+      {% for rp in pim_static_rp %}
+      - RP {{ rp.address }}: {{ rp.group_ranges | join(', ') }}
+      {% endfor %}
+  when: pim_interfaces | length > 0 or pim_static_rp | length > 0
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_pim.cfg"
+    state: absent
+  delegate_to: localhost
+

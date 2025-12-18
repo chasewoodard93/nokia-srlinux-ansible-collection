@@ -1,0 +1,21 @@
+{# EVPN overlay configuration for leaf switches (VTEPs) #}
+{# Configures iBGP EVPN neighbors to route reflectors and VXLAN tunnel interface #}
+
+{# EVPN neighbors (to route reflectors) #}
+{% if evpn_neighbors is defined and evpn_neighbors | length > 0 %}
+{% for neighbor in evpn_neighbors %}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} admin-state enable
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} peer-as {{ neighbor.peer_asn }}
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} description "{{ neighbor.description | default(neighbor.peer) }}"
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} peer-group evpn-overlay
+set / network-instance {{ network_instance }} protocols bgp neighbor {{ neighbor.peer_ip }} evpn admin-state enable
+{% endfor %}
+{% endif %}
+
+{# VXLAN tunnel interface #}
+{% if vxlan_interface is defined %}
+set / tunnel-interface {{ vxlan_interface }} vxlan-interface * ingress vni auto
+set / tunnel-interface {{ vxlan_interface }} vxlan-interface * type bridged
+set / tunnel-interface {{ vxlan_interface }} vxlan-interface * source-ip {{ bgp_router_id }}
+{% endif %}
+

@@ -1,0 +1,55 @@
+---
+# Calculate leaf interfaces and BGP/EVPN neighbors from fabric topology
+
+# ============================================================================
+# Calculate interfaces to all spines
+# ============================================================================
+
+- name: "Initialize leaf interface list"
+  set_fact:
+    interfaces: []
+    bgp_neighbors: []
+    evpn_neighbors: []
+
+- name: "Calculate interfaces for each spine"
+  set_fact:
+    interfaces: "{{ interfaces + [interface_config] }}"
+    bgp_neighbors: "{{ bgp_neighbors + [bgp_neighbor] }}"
+    evpn_neighbors: "{{ evpn_neighbors + [evpn_neighbor] }}"
+  vars:
+    spine_id: "{{ topology.spines.index(item) + 1 }}"
+    # Leaf uplinks typically use high port numbers (31, 32, etc.)
+    interface_id: "{{ 30 + spine_id }}"
+    # Interface IP: 10.0.<spine_id>.<leaf_pair>/31
+    # Spine gets even IP (.0, .2, .4, .6), leaf gets odd IP (.1, .3, .5, .7)
+    interface_ip: "10.0.{{ spine_id }}.{{ (device_id - 1) * 2 + 1 }}/31"
+    peer_ip: "10.0.{{ spine_id }}.{{ (device_id - 1) * 2 }}"
+    peer_loopback: "{{ loopback_scheme.spine_prefix }}.{{ spine_id }}"
+    peer_asn: "{{ bgp_design.underlay.spine_asn }}"
+    
+    interface_config:
+      name: "ethernet-1/{{ interface_id }}"
+      peer: "{{ item }}"
+      ipv4: "{{ interface_ip }}"
+      admin_state: "enable"
+    
+    bgp_neighbor:
+      peer: "{{ item }}"
+      peer_ip: "{{ peer_ip }}"
+      peer_asn: "{{ peer_asn }}"
+      description: "{{ item }}"
+    
+    evpn_neighbor:
+      peer: "{{ item }}"
+      peer_ip: "{{ peer_loopback }}"
+      peer_asn: "{{ bgp_design.overlay.evpn_asn }}"
+      description: "{{ item }}-RR"
+  loop: "{{ topology.spines }}"
+
+- name: "Display calculated leaf neighbors"
+  debug:
+    msg:
+      - "Interfaces: {{ interfaces | length }}"
+      - "BGP neighbors: {{ bgp_neighbors | length }}"
+      - "EVPN neighbors: {{ evpn_neighbors | length }}"
+

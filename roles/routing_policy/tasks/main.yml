@@ -1,0 +1,60 @@
+---
+# tasks/main.yml - Main tasks for routing_policy role
+
+- name: "Display routing policy configuration information"
+  debug:
+    msg: "Configuring routing policies on {{ inventory_hostname }}"
+
+# Generate and apply routing policy configuration
+- name: "Generate routing policy configuration"
+  set_fact:
+    _routing_policy_config: "{{ lookup('template', 'routing_policy.j2') }}"
+  when: >
+    routing_policy_prefix_lists | length > 0 or
+    routing_policy_community_lists | length > 0 or
+    routing_policy_as_path_lists | length > 0 or
+    routing_policy_policies | length > 0
+
+- name: "Apply routing policy configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    lines: "{{ _routing_policy_config.split('\n') | select('match', '^set ') | list }}"
+  register: routing_policy_result
+  when: >
+    routing_policy_prefix_lists | length > 0 or
+    routing_policy_community_lists | length > 0 or
+    routing_policy_as_path_lists | length > 0 or
+    routing_policy_policies | length > 0
+
+- name: "Display routing policy result"
+  debug:
+    msg: |
+      Configured:
+      - {{ routing_policy_prefix_lists | length }} prefix lists
+      - {{ routing_policy_community_lists | length }} community lists
+      - {{ routing_policy_as_path_lists | length }} AS path lists
+      - {{ routing_policy_policies | length }} route policies
+
+# Verify routing policy configuration
+- name: "Verify routing policy configuration"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "info routing-policy"
+  register: routing_policy_verify
+
+- name: "Routing policy configuration complete"
+  debug:
+    msg: |
+      ✅ Routing Policy Configuration Complete
+      ────────────────────────────────────────
+      Device: {{ inventory_hostname }}
+      Prefix Lists: {{ routing_policy_prefix_lists | length }}
+      Community Lists: {{ routing_policy_community_lists | length }}
+      AS Path Lists: {{ routing_policy_as_path_lists | length }}
+      Route Policies: {{ routing_policy_policies | length }}
+

@@ -1,0 +1,73 @@
+---
+# tasks/main.yml - Main tasks for sflow role
+
+- name: "Display sFlow configuration info"
+  debug:
+    msg: "Configuring sFlow on {{ inventory_hostname }}"
+  when: sflow_enabled | default(true)
+
+# Generate sFlow configuration
+- name: "Generate sFlow configuration"
+  template:
+    src: sflow.j2
+    dest: "/tmp/{{ inventory_hostname }}_sflow.cfg"
+  delegate_to: localhost
+  when: sflow_enabled | default(true)
+
+- name: "Read sFlow configuration"
+  slurp:
+    src: "/tmp/{{ inventory_hostname }}_sflow.cfg"
+  register: sflow_config_raw
+  delegate_to: localhost
+  when: sflow_enabled | default(true)
+
+- name: "Parse sFlow commands"
+  set_fact:
+    sflow_commands: "{{ (sflow_config_raw.content | b64decode).split('\n') | select('match', '^set ') | list }}"
+  when: sflow_enabled | default(true)
+
+# Apply sFlow configuration
+- name: "Apply sFlow configuration"
+  chasewoodard93.srlinux.srlinux_config:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands: "{{ sflow_commands }}"
+  register: sflow_result
+  when: 
+    - sflow_enabled | default(true)
+    - sflow_commands | length > 0
+
+# Verify sFlow configuration
+- name: "Verify sFlow status"
+  chasewoodard93.srlinux.srlinux_command:
+    host: "{{ ansible_host }}"
+    username: "{{ ansible_user }}"
+    password: "{{ ansible_password }}"
+    commands:
+      - "show system sflow"
+  register: sflow_status
+  when: sflow_enabled | default(true)
+
+- name: "Display sFlow summary"
+  debug:
+    msg: |
+      ✅ sFlow Configuration Complete
+      ────────────────────────────────
+      Device: {{ inventory_hostname }}
+      sFlow: {{ sflow_enabled | default(true) | ternary('Enabled', 'Disabled') }}
+      Sample Rate: 1:{{ sflow_sample_rate | default(10000) }}
+      Collectors: {{ sflow_collectors | length }}
+      {% for collector in sflow_collectors %}
+      - {{ collector.name }}: {{ collector.address }}:{{ collector.port | default(6343) }}
+      {% endfor %}
+      Interfaces: {{ sflow_interfaces | length }}
+  when: sflow_enabled | default(true)
+
+# Cleanup temporary file
+- name: "Cleanup temporary config file"
+  file:
+    path: "/tmp/{{ inventory_hostname }}_sflow.cfg"
+    state: absent
+  delegate_to: localhost
+

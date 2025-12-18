@@ -1,0 +1,38 @@
+---
+# defaults/main.yml - Default variables for l3_services role
+
+# IP-VRF (Layer 3 service) configuration
+ip_vrfs: []
+# Example format:
+# ip_vrfs:
+#   - name: "customer-a-vrf"
+#     vni: 20100
+#     route_distinguisher: "auto"
+#     route_target_export: "65000:100"
+#     route_target_import: "65000:100"
+#     description: "Customer A L3 Service"
+#     irb_interfaces:
+#       - vlan: 100
+#         ipv4: "192.168.100.1/24"
+#         anycast_gw: true
+#         mac_vrf: "customer-a"
+
+# EVPN configuration for IP-VRF
+evpn_evi_type: "ip-vrf"
+
+# Default VXLAN interface
+vxlan_interface: "vxlan1"
+
+# IRB (Integrated Routing and Bridging) configuration
+irb_interface_prefix: "irb"
+
+# Anycast gateway MAC address
+anycast_gw_mac: "00:00:5e:00:01:01"
+
+# Route advertisement
+advertise_ipv4_unicast: true
+advertise_ipv6_unicast: false
+
+# EVPN route types
+advertise_type5_routes: true  # IP Prefix routes
+

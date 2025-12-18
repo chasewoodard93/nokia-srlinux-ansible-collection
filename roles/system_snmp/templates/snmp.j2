@@ -1,0 +1,42 @@
+{# Template for SNMP configuration #}
+{% if snmp_enabled %}
+set / system snmp admin-state enable
+set / system snmp network-instance {{ snmp_network_instance }}
+
+{# System information #}
+{% if snmp_contact is defined and snmp_contact | length > 0 %}
+set / system snmp contact "{{ snmp_contact }}"
+{% endif %}
+{% if snmp_location is defined and snmp_location | length > 0 %}
+set / system snmp location "{{ snmp_location }}"
+{% endif %}
+
+{# SNMP v2c communities #}
+{% for community in snmp_communities %}
+set / system snmp community {{ community.name }} permission {{ community.permission }}
+{% endfor %}
+
+{# SNMP v3 users #}
+{% if snmp_v3_enabled %}
+{% for user in snmp_v3_users %}
+set / system snmp user {{ user.name }} authentication-type {{ user.auth_type }}
+set / system snmp user {{ user.name }} authentication-password {{ user.auth_password }}
+{% if user.priv_type is defined %}
+set / system snmp user {{ user.name }} privacy-type {{ user.priv_type }}
+set / system snmp user {{ user.name }} privacy-password {{ user.priv_password }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{# SNMP trap destinations #}
+{% if snmp_traps_enabled %}
+{% for trap in snmp_trap_destinations %}
+set / system snmp trap-destination {{ trap.address }} admin-state enable
+set / system snmp trap-destination {{ trap.address }} port {{ trap.port | default(162) }}
+{% if trap.community is defined %}
+set / system snmp trap-destination {{ trap.address }} community {{ trap.community }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endif %}
+
