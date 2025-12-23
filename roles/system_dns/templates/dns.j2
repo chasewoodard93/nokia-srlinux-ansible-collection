@@ -1,13 +1,12 @@
 {# Template for DNS configuration #}
+{# SR Linux expects server-list and search-list as bracketed lists #}
 {% if dns_enabled %}
 set / system dns network-instance {{ dns_network_instance }}
-{% for server in dns_servers %}
-set / system dns server-list {{ server }}
-{% endfor %}
+{% if dns_servers | length > 0 %}
+set / system dns server-list [ {{ dns_servers | join(' ') }} ]
+{% endif %}
 {% if dns_search_domains | length > 0 %}
-{% for domain in dns_search_domains %}
-set / system dns search-list {{ domain }}
-{% endfor %}
+set / system dns search-list [ {{ dns_search_domains | join(' ') }} ]
 {% endif %}
 {% endif %}
 

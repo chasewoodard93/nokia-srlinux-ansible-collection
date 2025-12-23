@@ -187,7 +187,7 @@ def main():
 
     try:
         # Get running configuration
-        running_output = connection.send_command(f'info flat {config_path}')
+        running_output = connection.execute_command(f'info flat {config_path}')
         running_lines = set()
         for line in running_output.split('\n'):
             line = line.strip()

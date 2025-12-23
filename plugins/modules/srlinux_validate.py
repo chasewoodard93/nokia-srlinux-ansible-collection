@@ -230,11 +230,12 @@ def main():
     commands = [c for c in config if c.strip() and not c.strip().startswith('#')]
 
     # Initialize result
+    # Note: 'warnings' is reserved by Ansible, so we use 'validation_warnings'
     result = {
         'changed': False,
         'valid': True,
-        'errors': [],
-        'warnings': [],
+        'validation_errors': [],
+        'validation_warnings': [],
         'validation_summary': {
             'total_commands': len(commands),
             'valid_commands': len(commands),
@@ -246,47 +247,48 @@ def main():
     # Syntax validation
     if check_syntax:
         syntax_errors = validate_syntax(commands)
-        result['errors'].extend(syntax_errors)
+        result['validation_errors'].extend(syntax_errors)
 
     # Reference validation (requires device connection)
     if check_references and commands:
         connection = SRLinuxConnection(module)
         try:
-            # Try to apply in candidate mode without commit
+            # Enter candidate mode and try to apply commands
+            connection.enter_candidate_mode()
             for cmd in commands:
                 try:
-                    connection.send_command(cmd)
+                    connection.execute_command(cmd)
                 except Exception as e:
                     error_msg = str(e)
                     if 'not found' in error_msg.lower() or 'does not exist' in error_msg.lower():
-                        result['warnings'].append({
+                        result['validation_warnings'].append({
                             'type': 'reference',
                             'command': cmd,
                             'message': error_msg
                         })
                     elif 'invalid' in error_msg.lower() or 'error' in error_msg.lower():
-                        result['errors'].append({
+                        result['validation_errors'].append({
                             'type': 'validation',
                             'command': cmd,
                             'message': error_msg
                         })
 
             # Discard candidate changes
-            connection.send_command('discard')
+            connection.execute_command('discard now')
             connection.disconnect()
         except Exception as e:
             connection.disconnect()
             # Don't fail, just add warning
-            result['warnings'].append({
+            result['validation_warnings'].append({
                 'type': 'connection',
                 'message': f'Could not validate references: {str(e)}'
             })
 
     # Update summary
-    result['validation_summary']['errors'] = len(result['errors'])
-    result['validation_summary']['warnings'] = len(result['warnings'])
-    result['validation_summary']['valid_commands'] = len(commands) - len(result['errors'])
-    result['valid'] = len(result['errors']) == 0
+    result['validation_summary']['errors'] = len(result['validation_errors'])
+    result['validation_summary']['warnings'] = len(result['validation_warnings'])
+    result['validation_summary']['valid_commands'] = len(commands) - len(result['validation_errors'])
+    result['valid'] = len(result['validation_errors']) == 0
 
     module.exit_json(**result)
 

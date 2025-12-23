@@ -32,9 +32,9 @@
     host: "{{ ansible_host }}"
     username: "{{ ansible_user }}"
     password: "{{ ansible_password }}"
-    commands: "{{ lldp_commands }}"
+    lines: "{{ lldp_commands }}"
   register: lldp_result
-  when: 
+  when:
     - lldp_enabled | default(true)
     - lldp_commands | length > 0
 
